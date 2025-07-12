@@ -1,0 +1,7 @@
+[project]
+name="Demo"
+version="0.0.1"
+dependencies=[
+    {path="Servomotor", develop=true}
+]
+#-e ./Servomotor
