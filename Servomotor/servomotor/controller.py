@@ -39,7 +39,7 @@ class ControllerPWM:
                                 Step 1                          Step 2                      Step 3
 
         :param target_freq: Target frequency at full speed Hz. It defines how fast the pulses are sent,
-                            and therefore how fast the motor or device moves once at full speed.
+                            and therefore how fast the services or device moves once at full speed.
 
                             Example:
                             | `target_freq` | Period (1 step) | Description              |
@@ -64,7 +64,7 @@ class ControllerPWM:
                      | Application                      | Effect of Duty Cycle                       |
                      | -------------------------------- | ------------------------------------------ |
                      | LED brightness                   | Higher duty = brighter light               |
-                     | Motor speed (PWM control)        | Higher duty = faster motor rotation        |
+                     | Motor speed (PWM control)        | Higher duty = faster services rotation        |
                      | Servo pulses (if fixed freq)     | Duty maps to position (e.g., 1–2ms pulses) |
                      | Stepper/servo pulse trains       | Often kept at 50% to match driver specs    |
 
@@ -120,7 +120,7 @@ class ControllerPWM:
         self.__pi.set_mode(self.__pin_step, pigpio.OUTPUT)
         self.__pi.set_mode(self.__pin_forward, pigpio.OUTPUT)
         self.__pi.set_mode(self.__pin_enable, pigpio.OUTPUT)
-        self.__pi.write(self.__pin_enable, 0)   # ensure initially the motor is stopped
+        self.__pi.write(self.__pin_enable, 0)   # ensure initially the services is stopped
 
         try:
             self.__wave_id = utils.create_ramp_waveform(
@@ -231,7 +231,7 @@ class ControllerPWM:
 
     def stop(self):
         self.__status = common.MotorStatus.STOPPED
-        # Disable motor
+        # Disable services
         self.__pi.write(self.__pin_enable, 1)
 
     async def run(self, forward: bool = True):
@@ -241,7 +241,7 @@ class ControllerPWM:
                     return
                 self.__status = common.MotorStatus.RUNNING
 
-                # Enable motor
+                # Enable services
                 self.__pi.write(self.__pin_enable, 0)
 
                 # Set direction
@@ -274,6 +274,6 @@ class ControllerPWM:
                 self.stop()
             except Exception as e:
                 self.__status = common.MotorStatus.FAULTED
-                # Disable motor
+                # Disable services
                 self.__pi.write(self.__pin_enable, 1)
-                print(f"Error running motor: {e}")
+                print(f"Error running services: {e}")

@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import List
-
+from dto.pin_dto import PinDto
 
 @dataclass
-class MotorConfigDto:
+class MotorDto:
     id: int
-    pin_step: int
-    pin_forward: int
-    pin_enable: int
+    pin_step: PinDto
+    pin_forward: PinDto
+    pin_enable: PinDto
     total_steps: int
     target_freq: int
     duty: float
@@ -17,5 +17,5 @@ class MotorConfigDto:
     loops: int
 
     @staticmethod
-    def from_list(data: list) -> List["MotorConfigDto"]:
-        return [MotorConfigDto(**motor) for motor in data]
+    def from_list(data: list) -> List["MotorDto"]:
+        return [MotorDto(**motor) for motor in data]
