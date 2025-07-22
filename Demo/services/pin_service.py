@@ -13,8 +13,12 @@ def is_pin_available(pin_id: int) -> bool:
     return pin and not pin.in_use
 
 def are_pins_available(pin_ids: list[int]) -> bool:
-    pins = get_pins(pin_ids)
+    pins = PinModel.query.filter(PinModel.id.in_(pin_ids)).all()
     return all(p and not p.in_use for p in pins)
+
+def get_available_pins() -> list[PinDto]:
+    pin_models = PinModel.query.filter_by(in_use=False).all()
+    return [pin_model_to_dto(pin) for pin in pin_models]
 
 def get_used_pins() -> list[PinDto]:
     pin_models = PinModel.query.filter_by(in_use=True).all()
@@ -23,9 +27,6 @@ def get_used_pins() -> list[PinDto]:
 def get_pin(pin_id: int) -> PinDto | None:
     pin = PinModel.query.get(pin_id)
     return pin_model_to_dto(pin) if pin else None
-
-def get_pins(pin_ids: list[int]) -> list[PinDto]:
-    return PinModel.query.filter(PinModel.id.in_(pin_ids)).all()
 
 def get_all() -> list[PinDto]:
     pin_models = PinModel.query.order_by(PinModel.physical_pin_number).all()

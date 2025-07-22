@@ -1,7 +1,7 @@
 import pigpio
 import time
 from . import utils, common
-import asyncio
+import threading
 
 class ControllerPWM:
     def __init__(self,
@@ -108,7 +108,7 @@ class ControllerPWM:
         self._freq_table = []
         self._pulses = []
 
-        self.__lock = asyncio.Lock()
+        self.__lock = threading.Lock()
         self.__status = common.MotorStatus.STOPPED
 
         if not self.__pi.connected:
@@ -233,9 +233,11 @@ class ControllerPWM:
         self.__status = common.MotorStatus.STOPPED
         # Disable services
         self.__pi.write(self.__pin_enable, 1)
+        self.__pi.wave_delete(self.__wave_id)
+        self.__wave_id = pigpio.PI_NO_WAVEFORM_ID
 
-    async def run(self, forward: bool = True):
-        async with self.__lock:
+    def run(self, forward: bool = True):
+        with self.__lock:
             try:
                 if self.__status == common.MotorStatus.RUNNING:
                     return
@@ -260,20 +262,28 @@ class ControllerPWM:
                     )
 
                 # Send the waveform the requested number of loops
-                print(f"\nStarting motion. WaveId: {self.__wave_id} Pins used: Wave: {self.__pin_step}, Forward: {self.__pin_forward}")
-
-                for loop in range(self.loops):
-                    print(f" Loop {loop + 1} of {self.loops}")
-                    self.__pi.wave_send_once(self.__wave_id)
-
-                    # Wait until this wave is finished
-                    while self.__pi.wave_tx_busy():
-                        time.sleep(0.001)
+                print(f"\nStarting motion. "
+                      f"WaveId: {self.__wave_id} "
+                      f"Pins used: Wave: {self.__pin_step}, "
+                      f"Forward: {self.__pin_forward} "
+                      f"Total steps: {self.__total_steps} "
+                  )
+                self.__pi.wave_send_once(self.__wave_id)
+                # for loop in range(self.loops):
+                #     if self.__status == common.MotorStatus.STOPPED:
+                #         print("Motion interrupted by user")
+                #         break
+                #
+                #     print(f"controller memory: {hex(id(self))}", f"Thread ID: {threading.get_ident()}", f" Loop {loop + 1} of {self.loops}")
+                #     self.__pi.wave_send_once(self.__wave_id)
+                #
+                #     # Wait until this wave is finished
+                #     while self.__pi.wave_tx_busy():
+                #         time.sleep(0.001)
 
                 print("Motion finished.")
-                self.stop()
+                self.__status = common.MotorStatus.STOPPED
+                #self.stop()
             except Exception as e:
-                self.__status = common.MotorStatus.FAULTED
-                # Disable services
-                self.__pi.write(self.__pin_enable, 1)
+                self.stop()
                 print(f"Error running services: {e}")

@@ -21,8 +21,7 @@ async def main():
         decel_steps=params['decel_steps'],
         loops=params['loops']
     )
-    await driver.run()
-    await driver.run()
+    driver.run()
     print("Done!")
 
 def read_params():

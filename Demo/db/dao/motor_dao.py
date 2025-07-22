@@ -17,14 +17,14 @@ def seed_default_motors():
             "name": "Motor 1",
             "step": 12,
             "dir": 16,
-            "enable": 20
+            "enable": 26
         },
         {
             "id": 2,
             "name": "Motor 2",
             "step": 13,
             "dir": 17,
-            "enable": 21
+            "enable": 13
         },
         {
             "id": 3,
@@ -59,11 +59,11 @@ def seed_default_motors():
             pin_enable=pin_enable,
             start_freq=100,
             target_freq=300,
-            total_steps=200,
+            angle=1.8,
             duty=50,
             accel_steps=0,
             decel_steps=0,
-            loops=10
+            loops=1
         )
         db_obj.session.add(motor)
 

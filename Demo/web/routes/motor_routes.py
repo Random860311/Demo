@@ -1,114 +1,44 @@
 from flask import Blueprint, jsonify, request
 
-from services import pin_service
-from servomotor.controller import ControllerPWM
-from dto.motor_dto import MotorDto
-from dto.pin_dto import PinDto
+from services import motor_service
 
 
-motor_routes = Blueprint("motor_routes", __name__)
+motor_bp = Blueprint("motor_bp", __name__, url_prefix="/motor")
 
-# Shared services pool
-motor_pool: dict[int, ControllerPWM] = {}
+@motor_bp.route("/", methods=["GET"])
+def list_all_motors():
+    dto_list = motor_service.get_all()
+    return jsonify([dto.__dict__ for dto in dto_list])
 
-@motor_routes.route("/motors/update", methods=["POST"])
+@motor_bp.route("/<int:motor_id>", methods=["POST"])
 def update_motor():
+    dto_list = motor_service.get_all()
+    return jsonify([dto.__dict__ for dto in dto_list])
+
+@motor_bp.route("/start/<int:motor_id>", methods=["POST"])
+def start_motor(motor_id):
+    data = request.get_json(silent=True) or {}  # prevents crash if body is empty or invalid JSON
+
+    direction = data.get("direction", True)  # default to True if not provided
+
+    if not isinstance(direction, bool):
+        return jsonify({"error": "'direction' must be a boolean (true/false)."}), 400
+
     try:
-        moto = request.get_json()
-        configs = MotorDto.from_list(data)
-
-        # Validate unique GPIOs
-        all_pins = set()
-        for config in configs:
-            pins = (config.pin_step, config.pin_forward, config.pin_enable)
-            if any(p in all_pins for p in pins):
-                return jsonify({"error": f"GPIO pin conflict in services ID {config.id}"}), 400
-            all_pins.update(pins)
-
-        # Rebuild motor_pool
-        motor_pool.clear()
-        for cfg in configs:
-            motor_pool[cfg.id] = ControllerPWM(
-                pi=pigpio_service.pi,
-                total_steps=cfg.total_steps,
-                target_freq=cfg.target_freq,
-                pin_step=cfg.pin_step,
-                pin_forward=cfg.pin_forward,
-                pin_enable=cfg.pin_enable,
-                duty=cfg.duty,
-                start_freq=cfg.start_freq,
-                accel_steps=cfg.accel_steps,
-                decel_steps=cfg.decel_steps,
-                loops=cfg.loops
-            )
-
-        return jsonify({"message": f"{len(configs)} motors configured."})
-
+        motor_service.run_motor(motor_id, forward=direction)
+        return jsonify({
+            "message": f"Motor {motor_id} started successfully.",
+            "direction": "forward" if direction else "reverse"
+        }), 200
+    except KeyError:
+        return jsonify({"error": f"Motor {motor_id} not found."}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@motor_routes.route("/motor/<int:motor_id>/run", methods=["POST"])
-def run_motor(motor_id):
-    try:
-        forward = request.args.get("forward", "true").lower() == "true"
-        motor = motor_pool.get(motor_id)
-        if motor is None:
-            return jsonify({"error": "Motor not found"}), 404
-
-        import asyncio
-        asyncio.create_task(motor.run(forward=forward))
-        return jsonify({"message": f"Motor {motor_id} started."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@motor_routes.route("/motor/<int:motor_id>/stop", methods=["POST"])
+@motor_bp.route("/stop/<int:motor_id>", methods=["POST"])
 def stop_motor(motor_id):
     try:
-        motor = motor_pool.get(motor_id)
-        if motor is None:
-            return jsonify({"error": "Motor not found"}), 404
-
-        import asyncio
-        asyncio.create_task(motor.stop())
-        return jsonify({"message": f"Motor {motor_id} stopped."})
+        motor_service.stop_motor(motor_id)
+        return jsonify({"message": f"Motor {motor_id} stopped successfully."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@motor_routes.route("/motor/<int:motor_id>/status", methods=["GET"])
-def motor_status(motor_id):
-    try:
-        motor = motor_pool.get(motor_id)
-        if motor is None:
-            return jsonify({"error": "Motor not found"}), 404
-
-        return jsonify({"status": motor.status.value})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-def get_motor_dto_from_request() -> MotorDto:
-    data = request.get_json()
-
-    def build_pin_dto(pin_data: dict) -> PinDto:
-        return PinDto(
-            id=pin_data["id"],
-            physical_pin_number=pin_data["physical_pin_number"],
-            pigpio_pin_number=pin_data.get("pigpio_pin_number"),
-            pin_type=PinType(pin_data["pin_type"]),
-            description=pin_data["description"],
-            in_use=pin_data["in_use"]
-        )
-
-    return MotorDto(
-        id=data["id"],
-        pin_step=build_pin_dto(data["pin_step"]),
-        pin_forward=build_pin_dto(data["pin_forward"]),
-        pin_enable=build_pin_dto(data["pin_enable"]),
-        total_steps=data["total_steps"],
-        target_freq=data["target_freq"],
-        duty=data["duty"],
-        start_freq=data["start_freq"],
-        accel_steps=data["accel_steps"],
-        decel_steps=data["decel_steps"],
-        loops=data["loops"]
-    )

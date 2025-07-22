@@ -5,16 +5,18 @@ from dto.pin_dto import PinDto
 @dataclass
 class MotorDto:
     id: int
-    pin_step: PinDto
-    pin_forward: PinDto
-    pin_enable: PinDto
-    total_steps: int
-    target_freq: int
+    name: str
+    pin_step: PinDto|None
+    pin_forward: PinDto|None
+    pin_enable: PinDto|None
+    angle: float
+    target_freq: float
     duty: float
-    start_freq: int
+    start_freq: float
     accel_steps: int
     decel_steps: int
-    loops: int
+    loops: float = 1
+    total_steps: int = 0
 
     @staticmethod
     def from_list(data: list) -> List["MotorDto"]:
