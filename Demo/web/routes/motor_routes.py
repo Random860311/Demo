@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from services import motor_service
+from dto.motor_dto import MotorDto
 
 
 motor_bp = Blueprint("motor_bp", __name__, url_prefix="/motor")
@@ -10,10 +11,19 @@ def list_all_motors():
     dto_list = motor_service.get_all()
     return jsonify([dto.__dict__ for dto in dto_list])
 
-@motor_bp.route("/<int:motor_id>", methods=["POST"])
+@motor_bp.route("", methods=["POST"], strict_slashes=False)
 def update_motor():
-    dto_list = motor_service.get_all()
-    return jsonify([dto.__dict__ for dto in dto_list])
+    try:
+        print("Update motor")
+        data = request.get_json()
+        print("Update motor, data:", data)
+        motor = MotorDto.from_dict(data)
+        print("Update motor, motor:", motor.__dict__)
+        motor_service.update_motor(motor)
+        print("Motor updated", motor)
+        return jsonify({"message": "Motor received", "motor_id": motor.id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @motor_bp.route("/start/<int:motor_id>", methods=["POST"])
 def start_motor(motor_id):

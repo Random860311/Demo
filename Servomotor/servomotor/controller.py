@@ -14,8 +14,7 @@ class ControllerPWM:
                  duty: float = 50,
                  start_freq: int = 500,
                  accel_steps: int = 0,
-                 decel_steps: int = 0,
-                 loops: int = 1):
+                 decel_steps: int = 0):
         """
         1- The user supplies required parameters at runtime, including pi instance.
         2- Acceleration / deceleration: Linear ramps are produced by inserting gradually changing frequencies into the pulse train.
@@ -91,7 +90,6 @@ class ControllerPWM:
 
         :param accel_steps: Steps used to speed up (default 0 = no ramp)
         :param decel_steps: Steps used to decelerate (default 0 = no ramp)
-        :param loops: How many times to repeat the sequence (default 1)
         """
         self.__pi = pi
         self.__total_steps = total_steps
@@ -103,7 +101,6 @@ class ControllerPWM:
         self.__start_freq = start_freq
         self.__accel_steps = accel_steps
         self.__decel_steps = decel_steps
-        self.__loops = loops
 
         self._freq_table = []
         self._pulses = []
@@ -218,14 +215,6 @@ class ControllerPWM:
         self._invalidate_wave()
 
     @property
-    def loops(self) -> int:
-        """How many times to repeat the sequence (default 1)"""
-        return self.__loops
-    @loops.setter
-    def loops(self, value: int):
-        self.__loops = value
-
-    @property
     def status(self) -> common.MotorStatus:
         return self.__status
 
@@ -261,7 +250,6 @@ class ControllerPWM:
                         duty=self.duty,
                     )
 
-                # Send the waveform the requested number of loops
                 print(f"\nStarting motion. "
                       f"WaveId: {self.__wave_id} "
                       f"Pins used: Wave: {self.__pin_step}, "
@@ -269,17 +257,7 @@ class ControllerPWM:
                       f"Total steps: {self.__total_steps} "
                   )
                 self.__pi.wave_send_once(self.__wave_id)
-                # for loop in range(self.loops):
-                #     if self.__status == common.MotorStatus.STOPPED:
-                #         print("Motion interrupted by user")
-                #         break
-                #
-                #     print(f"controller memory: {hex(id(self))}", f"Thread ID: {threading.get_ident()}", f" Loop {loop + 1} of {self.loops}")
-                #     self.__pi.wave_send_once(self.__wave_id)
-                #
-                #     # Wait until this wave is finished
-                #     while self.__pi.wave_tx_busy():
-                #         time.sleep(0.001)
+
 
                 print("Motion finished.")
                 self.__status = common.MotorStatus.STOPPED

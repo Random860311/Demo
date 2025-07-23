@@ -7,9 +7,9 @@ from db.model import db_config
 from web.routes import pin_routes, motor_routes
 
 app = Flask(__name__)
-CORS(app)
 app.register_blueprint(pin_routes.pin_bp)
 app.register_blueprint(motor_routes.motor_bp)
+CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///demo.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

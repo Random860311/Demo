@@ -19,5 +19,23 @@ class MotorDto:
     total_steps: int = 0
 
     @staticmethod
+    def from_dict(data: dict) -> "MotorDto":
+        return MotorDto(
+            id=data["id"],
+            name=data["name"],
+            pin_step=PinDto.from_dict(data["pin_step"]) if data.get("pin_step") else None,
+            pin_forward=PinDto.from_dict(data["pin_forward"]) if data.get("pin_forward") else None,
+            pin_enable=PinDto.from_dict(data["pin_enable"]) if data.get("pin_enable") else None,
+            angle=data["angle"],
+            target_freq=data["target_freq"],
+            duty=data["duty"],
+            start_freq=data["start_freq"],
+            accel_steps=data["accel_steps"],
+            decel_steps=data["decel_steps"],
+            loops=data.get("loops", 1),
+            total_steps=data.get("total_steps", 0),
+        )
+
+    @staticmethod
     def from_list(data: list) -> List["MotorDto"]:
-        return [MotorDto(**motor) for motor in data]
+        return [MotorDto.from_dict(**motor) for motor in data]

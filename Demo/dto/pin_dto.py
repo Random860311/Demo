@@ -11,3 +11,7 @@ class PinDto:
     pin_type: PinType
     description: str
     in_use: bool
+
+    @staticmethod
+    def from_dict(data: dict) -> "PinDto":
+        return PinDto(**data)

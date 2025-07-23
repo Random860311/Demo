@@ -39,8 +39,7 @@ def get_controller(motor_id: int) -> ControllerPWM | None:
             duty=motor_model.duty,
             start_freq=int(motor_model.start_freq),
             accel_steps=motor_model.accel_steps,
-            decel_steps=motor_model.decel_steps,
-            loops=motor_model.loops
+            decel_steps=motor_model.decel_steps
         )
         controller_pool[motor_id] = controller
         return controller
@@ -75,8 +74,16 @@ def stop_motor(motor_id: int) -> bool:
 def update_motor(motor: MotorDto):
     motor_model = MotorModel.query.get(motor.id)
 
-    if not pin_service.are_pins_available([motor_model.pin_step_id, motor_model.pin_forward_id, motor_model.pin_enable_id]):
-        raise RuntimeError("Not enough pins available for services ID {motor.id}")
+    pins_to_check = []
+    if motor.pin_step and motor.pin_step.id != motor_model.pin_step_id:
+        pins_to_check.append(motor.pin_step.id)
+    if motor.pin_forward and motor.pin_forward.id != motor_model.pin_forward_id:
+        pins_to_check.append(motor.pin_forward.id)
+    if motor.pin_enable and motor.pin_enable.id != motor_model.pin_enable_id:
+        pins_to_check.append(motor.pin_enable.id)
+
+    if not pin_service.are_pins_available(pins_to_check):
+        raise RuntimeError("Selected pins are not available {motor.id}")
 
     motor_model = motor_converter.apply_motor_dto_to_model(motor_model, motor)
 
