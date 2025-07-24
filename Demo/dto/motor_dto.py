@@ -39,3 +39,20 @@ class MotorDto:
     @staticmethod
     def from_list(data: list) -> List["MotorDto"]:
         return [MotorDto.from_dict(**motor) for motor in data]
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "pin_step": self.pin_step.to_dict() if self.pin_step else None,
+            "pin_forward": self.pin_forward.to_dict() if self.pin_forward else None,
+            "pin_enable": self.pin_enable.to_dict() if self.pin_enable else None,
+            "angle": self.angle,
+            "target_freq": self.target_freq,
+            "duty": self.duty,
+            "start_freq": self.start_freq,
+            "accel_steps": self.accel_steps,
+            "decel_steps": self.decel_steps,
+            "loops": self.loops,
+            "total_steps": self.total_steps,
+        }

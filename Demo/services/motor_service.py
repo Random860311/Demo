@@ -71,7 +71,7 @@ def stop_motor(motor_id: int) -> bool:
         return True
     return False
 
-def update_motor(motor: MotorDto):
+def update_motor(motor: MotorDto) -> MotorDto:
     motor_model = MotorModel.query.get(motor.id)
 
     pins_to_check = []
@@ -96,4 +96,5 @@ def update_motor(motor: MotorDto):
 
     db_obj.session.commit()
 
+    return motor_model_to_dto(motor_model)
 
