@@ -63,7 +63,7 @@ def seed_default_motors():
             duty=50,
             accel_steps=0,
             decel_steps=0,
-            loops=1
+            turns=1
         )
         db_obj.session.add(motor)
 

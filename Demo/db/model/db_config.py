@@ -14,7 +14,6 @@ def initialize():
     global init_done
 
     if not init_done:
-
         print("Creating tables...")
         with app.app.app_context():
             db_obj.create_all()

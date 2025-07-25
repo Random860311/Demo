@@ -2,15 +2,28 @@ import pigpio
 from sqlalchemy.exc import SQLAlchemyError
 
 from db.model.pin_model import PinModel
+from dto.motor_dto import MotorDto
 from dto.pin_dto import PinDto
 from common.converters.pin_converter import pin_model_to_dto
 from db.model.db_config import db_obj
+from db.model.motor_model import MotorModel
 
 pi = pigpio.pi()  # shared pigpio connection
 
 def is_pin_available(pin_id: int) -> bool:
     pin = get_pin(pin_id)
     return pin and not pin.in_use
+
+def is_pin_config_valid(motor_dto: MotorDto, motor_model: MotorModel) -> bool:
+    pins_to_check = []
+    if motor_dto.pin_step and motor_dto.pin_step.id != motor_model.pin_step_id:
+        pins_to_check.append(motor_dto.pin_step.id)
+    if motor_dto.pin_forward and motor_dto.pin_forward.id != motor_model.pin_forward_id:
+        pins_to_check.append(motor_dto.pin_forward.id)
+    if motor_dto.pin_enable and motor_dto.pin_enable.id != motor_model.pin_enable_id:
+        pins_to_check.append(motor_dto.pin_enable.id)
+
+    return are_pins_available(pins_to_check)
 
 def are_pins_available(pin_ids: list[int]) -> bool:
     pins = PinModel.query.filter(PinModel.id.in_(pin_ids)).all()

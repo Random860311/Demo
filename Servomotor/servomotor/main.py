@@ -16,7 +16,7 @@ def main():
         start_freq=params.get('start_freq') or 0,
         accel_steps=params['accel_steps'],
         decel_steps=params['decel_steps'],
-        loops=params['loops']
+        pin_enable=1
     )
     driver.run()
     print("Done!")
@@ -36,7 +36,7 @@ def read_params():
     if params["accel_steps"] > 0:
         params["start_freq"] = int(input("Start frequency for ramp‑up [Hz] (default 500): ") or 500)
     params["decel_steps"] = int(input("Steps used to decelerate (default 0 = no ramp): ") or 0)
-    params["loops"] = int(input("How many times to repeat the whole sequence? (default 10): ") or 10)
+    params["turns"] = int(input("How many times to repeat the whole sequence? (default 10): ") or 10)
     return params
 
 if __name__ == '__main__':

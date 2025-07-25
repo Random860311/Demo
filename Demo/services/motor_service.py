@@ -5,6 +5,7 @@ from common.converters import motor_converter
 from common.converters.motor_converter import motor_model_to_dto
 from db.model.motor_model import MotorModel
 from db.model.db_config import db_obj
+from db.model.pin_model import PinModel
 from dto.pin_dto import PinDto
 from services.pin_service import get_pin
 from servomotor.controller import ControllerPWM
@@ -17,6 +18,19 @@ import threading
 # Fixed services slots (IDs 1–4)
 controller_pool: Dict[int, ControllerPWM] = {}
 controller_lock = threading.Lock()
+
+def update_controller(motor_dto: MotorDto):
+    current_controller = get_controller(motor_dto.id)
+
+    with controller_lock:
+        if current_controller.status == MotorStatus.RUNNING:
+            raise ValueError("Motor is already running")
+        current_controller.target_freq = motor_dto.target_freq
+        current_controller.duty = motor_dto.duty
+        current_controller.start_freq = motor_dto.start_freq
+        current_controller.accel_steps = motor_dto.accel_steps
+        current_controller.decel_steps = motor_dto.decel_steps
+        current_controller.total_steps = motor_dto.total_steps
 
 def get_controller(motor_id: int) -> ControllerPWM | None:
     with controller_lock:
@@ -71,30 +85,16 @@ def stop_motor(motor_id: int) -> bool:
         return True
     return False
 
-def update_motor(motor: MotorDto) -> MotorDto:
-    motor_model = MotorModel.query.get(motor.id)
+def update_motor(motor_dto: MotorDto) -> MotorDto:
+    """
+    Update motor controller and db configuration, this method does not update pins configuration
+    :param motor_dto: new motor configuration
+    :return: The new configuration
+    """
+    with db_obj.session.begin():
+        existing_motor_model = MotorModel.query.get(motor_dto.id)
+        motor_converter.motor_dto_to_model(motor_dto, existing_motor_model)
+        update_controller(motor_dto)
 
-    pins_to_check = []
-    if motor.pin_step and motor.pin_step.id != motor_model.pin_step_id:
-        pins_to_check.append(motor.pin_step.id)
-    if motor.pin_forward and motor.pin_forward.id != motor_model.pin_forward_id:
-        pins_to_check.append(motor.pin_forward.id)
-    if motor.pin_enable and motor.pin_enable.id != motor_model.pin_enable_id:
-        pins_to_check.append(motor.pin_enable.id)
-
-    if not pin_service.are_pins_available(pins_to_check):
-        raise RuntimeError("Selected pins are not available {motor.id}")
-
-    motor_model = motor_converter.apply_motor_dto_to_model(motor_model, motor)
-
-    #pin_service.set_pins_in_use([motor_model.pin_step_id, motor_model.pin_forward_id, motor_model.pin_enable_id], True)
-
-    current_controller = get_controller(motor.id)
-    current_controller.pin_forward = motor_model.pin_forward.pigpio_pin_number
-    current_controller.pin_step = motor_model.pin_step.pigpio_pin_number
-    current_controller.pin_enable = motor_model.pin_enable.pigpio_pin_number
-
-    db_obj.session.commit()
-
-    return motor_model_to_dto(motor_model)
+        return motor_dto
 

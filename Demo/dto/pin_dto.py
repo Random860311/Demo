@@ -21,7 +21,9 @@ class PinDto:
             "id": self.id,
             "physical_pin_number": self.physical_pin_number,
             "pigpio_pin_number": self.pigpio_pin_number,
-            "pin_type": self.pin_type.value,
+            "pin_type": self.pin_type if isinstance(self.pin_type, str) else self.pin_type.value,
             "description": self.description,
             "in_use": self.in_use,
         }
+
+    # "pin_type": self.pin_type.value,

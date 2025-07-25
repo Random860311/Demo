@@ -20,8 +20,6 @@ class ControllerPWM:
         2- Acceleration / deceleration: Linear ramps are produced by inserting gradually changing frequencies into the pulse train.
            Adjust accel_steps and decel_steps independently (set to 0 for no ramp).
         3- Each step = HIGH+LOW transition. Builds one pigpio waveform containing exactly total_steps × 2 pulses.
-        4- After the waveform is created once, the script loops wave_send_once() as many times as the user requests (loops),
-           waiting for each pass to finish before the next begins. That guarantees identical timing on every repetition.
         5- Duty‑cycle: For each period the HIGH time is period × duty%, LOW = remainder.
         6- Limits & Safety: pigpio needs ≥ 1µs per pulse; the script throws an error if you exceed that.
            Waveforms use DMA RAM; extremely large total_steps (hundreds of thousands) might exhaust memory

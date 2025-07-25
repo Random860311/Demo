@@ -15,8 +15,18 @@ class MotorDto:
     start_freq: float
     accel_steps: int
     decel_steps: int
-    loops: float = 1
-    total_steps: int = 0
+
+    turns: float = 1
+    distance: float = 0
+    distance_per_turn: float = 0
+
+    @property
+    def total_steps(self) -> int:
+        return 0 if self.angle <= 0 else round((360 / self.angle) * self.total_turns)
+
+    @property
+    def total_turns(self) -> float:
+        return self.turns if (self.distance <= 0 or self.distance_per_turn <= 0) else self.distance / self.distance_per_turn
 
     @staticmethod
     def from_dict(data: dict) -> "MotorDto":
@@ -32,8 +42,9 @@ class MotorDto:
             start_freq=data["start_freq"],
             accel_steps=data["accel_steps"],
             decel_steps=data["decel_steps"],
-            loops=data.get("loops", 1),
-            total_steps=data.get("total_steps", 0),
+            turns=data.get("turns", 1),
+            distance=data.get("distance", 0),
+            distance_per_turn=data.get("distance_per_turn", 0),
         )
 
     @staticmethod
@@ -53,6 +64,8 @@ class MotorDto:
             "start_freq": self.start_freq,
             "accel_steps": self.accel_steps,
             "decel_steps": self.decel_steps,
-            "loops": self.loops,
+            "distance": self.distance,
+            "distance_per_turn": self.distance_per_turn,
+            "turns": self.total_turns,
             "total_steps": self.total_steps,
         }
