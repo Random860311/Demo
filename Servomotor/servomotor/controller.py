@@ -1,11 +1,17 @@
+import sys
+
 import pigpio
 import time
-from . import utils, common
+from . import utils
+from controller_status import MotorStatus
 import threading
+from core.event.event_dispatcher import dispatcher
+
 
 class ControllerPWM:
     def __init__(self,
                  pi: pigpio.pi,
+                 controller_id: int,
                  total_steps: int,
                  target_freq: int,
                  pin_step: int,
@@ -90,21 +96,22 @@ class ControllerPWM:
         :param decel_steps: Steps used to decelerate (default 0 = no ramp)
         """
         self.__pi = pi
+        self.__controller_id = controller_id
         self.__total_steps = total_steps
         self.__target_freq = target_freq
         self.__pin_step = pin_step
         self.__pin_forward = pin_forward
         self.__pin_enable = pin_enable
         self.__duty = duty
-        self.__start_freq = start_freq
-        self.__accel_steps = accel_steps
-        self.__decel_steps = decel_steps
+        # self.__start_freq = start_freq
+        # self.__accel_steps = accel_steps
+        # self.__decel_steps = decel_steps
 
         self._freq_table = []
         self._pulses = []
 
-        self.__lock = threading.Lock()
-        self.__status = common.MotorStatus.STOPPED
+        self.__status = MotorStatus.STOPPED
+        self.__abort_event = threading.Event()
 
         if not self.__pi.connected:
             raise RuntimeError("pigpiod daemon not running. Start with 'sudo pigpiod' \nor make sure: \n sudo systemctl enable pigpiod \nsudo systemctl start pigpiod")
@@ -115,41 +122,21 @@ class ControllerPWM:
         self.__pi.set_mode(self.__pin_step, pigpio.OUTPUT)
         self.__pi.set_mode(self.__pin_forward, pigpio.OUTPUT)
         self.__pi.set_mode(self.__pin_enable, pigpio.OUTPUT)
-        self.__pi.write(self.__pin_enable, 0)   # ensure initially the services is stopped
+        self.__pi.write(self.__pin_enable, 0)   # ensure initially the service is stopped
 
-        try:
-            self.__wave_id = utils.create_ramp_waveform(
-                pi=self.__pi,
-                accel_steps=self.accel_steps,
-                decel_steps=self.decel_steps,
-                total_steps=self.total_steps,
-                target_freq=self.target_freq,
-                start_freq=self.start_freq,
-                pin_step=self.pin_step,
-                duty=self.duty,
-            )
-        except Exception as e:
-            self.__wave_id = pigpio.PI_NO_WAVEFORM_ID
-            print(f"Error creating ramp waveform in constructor: {e}")
-
-
-        # self.__pi.set_pull_up_down(self.__pin_step, pigpio.PUD_UP)
-        # self.__pi.set_pull_up_down(self.__pin_forward, pigpio.PUD_UP)
-        # self.__pi.set_pull_up_down(self.__pin_reverse, pigpio.PUD_UP)
-
-    def _invalidate_wave(self):
-        if self.__wave_id != pigpio.PI_NO_WAVEFORM_ID:
-            self.__pi.wave_delete(self.__wave_id)
-            self.__wave_id = pigpio.PI_NO_WAVEFORM_ID
+    @property
+    def pi(self) -> pigpio.pi:
+        return self.__pi
+    @pi.setter
+    def pi(self, value: pigpio.pi):
+        self.__pi = value
 
     @property
     def total_steps(self) -> int:
-        """Total number of steps (pulses)"""
         return self.__total_steps
     @total_steps.setter
     def total_steps(self, value: int):
         self.__total_steps = value
-        self._invalidate_wave()
 
     @property
     def target_freq(self) -> int:
@@ -158,7 +145,6 @@ class ControllerPWM:
     @target_freq.setter
     def target_freq(self, value: int):
         self.__target_freq = value
-        self._invalidate_wave()
 
     @property
     def pin_step(self) -> int:
@@ -183,52 +169,68 @@ class ControllerPWM:
     @duty.setter
     def duty(self, value: float):
         self.__duty = value
-        self._invalidate_wave()
+
+    # @property
+    # def start_freq(self) -> int:
+    #     """Start frequency for ramp‑up [Hz] (default 500)"""
+    #     return self.__start_freq
+    # @start_freq.setter
+    # def start_freq(self, value: int):
+    #     self.__start_freq = value
+
+    # @property
+    # def accel_steps(self) -> int:
+    #     """Steps used to speed up (default 0 = no ramp)"""
+    #     return self.__accel_steps
+    # @accel_steps.setter
+    # def accel_steps(self, value: int):
+    #     self.__accel_steps = value
+
+    # @property
+    # def decel_steps(self) -> int:
+    #     """Steps used to decelerate (default 0 = no ramp)"""
+    #     return self.__decel_steps
+    # @decel_steps.setter
+    # def decel_steps(self, value: int):
+    #     self.__decel_steps = value
 
     @property
-    def start_freq(self) -> int:
-        """Start frequency for ramp‑up [Hz] (default 500)"""
-        return self.__start_freq
-    @start_freq.setter
-    def start_freq(self, value: int):
-        self.__start_freq = value
-        self._invalidate_wave()
-
-    @property
-    def accel_steps(self) -> int:
-        """Steps used to speed up (default 0 = no ramp)"""
-        return self.__accel_steps
-    @accel_steps.setter
-    def accel_steps(self, value: int):
-        self.__accel_steps = value
-        self._invalidate_wave()
-
-    @property
-    def decel_steps(self) -> int:
-        """Steps used to decelerate (default 0 = no ramp)"""
-        return self.__decel_steps
-    @decel_steps.setter
-    def decel_steps(self, value: int):
-        self.__decel_steps = value
-        self._invalidate_wave()
-
-    @property
-    def status(self) -> common.MotorStatus:
+    def status(self) -> str:
         return self.__status
 
-    def stop(self):
-        self.__status = common.MotorStatus.STOPPED
-        # Disable services
-        self.__pi.write(self.__pin_enable, 1)
-        self.__pi.wave_delete(self.__wave_id)
-        self.__wave_id = pigpio.PI_NO_WAVEFORM_ID
+    @status.setter
+    def status(self, value: MotorStatus):
+        if self.__status == value:
+            return
+        self.__status = value
+        # Notify listeners of status changes
+        dispatcher.emit(self.__status, self.__controller_id)
 
-    def run(self, forward: bool = True):
-        with self.__lock:
+    def stop(self):
+        try:
+            # Interrupt the wait if any (case infinite)
+            self.__abort_event.set()
+
+            # Disable services
+            self.__pi.write(self.__pin_enable, 1)
+            self.__pi.hardware_PWM(self.__pin_step, 0, 0)
+
+            # Update controller status
+            self.status = MotorStatus.STOPPED
+        except Exception as e:
+            print(f"Error stopping services: {e}")
+            self.status = MotorStatus.FAULTED
+            raise e
+
+
+    def run(self, forward: bool = True, infinite: bool = False):
+        if self.status == MotorStatus.RUNNING:
+            return
+
+        def worker():
             try:
-                if self.__status == common.MotorStatus.RUNNING:
-                    return
-                self.__status = common.MotorStatus.RUNNING
+                self.__abort_event.clear()
+                self.status = MotorStatus.RUNNING
 
                 # Enable services
                 self.__pi.write(self.__pin_enable, 0)
@@ -236,30 +238,25 @@ class ControllerPWM:
                 # Set direction
                 self.__pi.write(self.__pin_forward, 1 if forward else 0)
 
-                if self.__wave_id == pigpio.PI_NO_WAVEFORM_ID:
-                    self.__wave_id = utils.create_ramp_waveform(
-                        pi=self.__pi,
-                        accel_steps=self.accel_steps,
-                        decel_steps=self.decel_steps,
-                        total_steps=self.total_steps,
-                        target_freq=self.target_freq,
-                        start_freq=self.start_freq,
-                        pin_step=self.pin_step,
-                        duty=self.duty,
-                    )
+                #Start running
+                self.__pi.hardware_PWM(self.__pin_step, self.target_freq, int(self.duty * 10_000))
 
-                print(f"\nStarting motion. "
-                      f"WaveId: {self.__wave_id} "
-                      f"Pins used: Wave: {self.__pin_step}, "
-                      f"Forward: {self.__pin_forward} "
-                      f"Total steps: {self.__total_steps} "
-                  )
-                self.__pi.wave_send_once(self.__wave_id)
+                # If not infinite sleep the thread for the calculated duration to move the desired steps
+                # Stop method is called in the finally block
+                # If infinite wait until the call to stop is made
+                if not infinite:
+                    duration = self.total_steps / self.target_freq
+                    self.__abort_event.wait(duration)
 
-
-                print("Motion finished.")
-                self.__status = common.MotorStatus.STOPPED
-                #self.stop()
             except Exception as e:
-                self.stop()
                 print(f"Error running services: {e}")
+                self.status = MotorStatus.FAULTED
+                # Call the stop method even if the run is infinite
+                self.stop()
+                raise e
+            finally:
+                # Wait for the stop called manually if infinite
+                if not infinite:
+                    self.stop()
+
+        threading.Thread(target=worker, daemon=True).start()

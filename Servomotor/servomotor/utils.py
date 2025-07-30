@@ -1,3 +1,5 @@
+import time
+
 import pigpio
 
 def frequency_to_period(frequency: float) -> int:
@@ -14,15 +16,12 @@ def add_pulse_pair(pulses, gpio_mask, high_time_us, low_time_us):
     pulses.append(pigpio.pulse(gpio_mask, 0, high_time_us))  # HIGH
     pulses.append(pigpio.pulse(0, gpio_mask, low_time_us))  # LOW
 
-def create_ramp_waveform(
-        pi: pigpio.pi,
-        accel_steps: int,
-        decel_steps: int,
-        total_steps: int,
-        target_freq: int,
-        start_freq: int,
-        pin_step: int,
-        duty: float) -> int:
+def build_frequency_table(
+    accel_steps: int,
+    decel_steps: int,
+    total_steps: int,
+    target_freq: int,
+    start_freq: int) -> list[float]:
     if accel_steps + decel_steps > total_steps:
         raise ValueError("accel_steps + decel_steps must be ≤ total_steps")
 
@@ -34,7 +33,7 @@ def create_ramp_waveform(
         for i in range(accel_steps):
             freq_table.append(start_freq + i * delta_f)
 
-    # Constant speed
+    # Constant
     const_steps = total_steps - accel_steps - decel_steps
     freq_table.extend([target_freq] * const_steps)
 
@@ -44,7 +43,38 @@ def create_ramp_waveform(
         for i in range(decel_steps):
             freq_table.append(target_freq - (i + 1) * delta_f)
 
-    # Build pulses
+    return freq_table
+
+def run_steps_manually(
+        pi: pigpio.pi,
+        pin_step: int,
+        pin_enable: int,
+        accel_steps: int,
+        decel_steps: int,
+        total_steps: int,
+        target_freq: int,
+        start_freq: int,
+        duty: float):
+
+    pi.write(pin_enable, 0)
+    freq_table = build_frequency_table(
+        accel_steps=accel_steps,
+        decel_steps=decel_steps,
+        total_steps=total_steps,
+        target_freq=target_freq,
+        start_freq=start_freq,
+    )
+    pulses = build_pulses(pin_step, freq_table, duty)
+
+    for p in pulses:
+        pi.write(pin_step, 1)
+        time.sleep(p.gpio_on / 1_000.0)
+        pi.write(pin_step, 0)
+        time.sleep(p.gpio_off / 1_000.0)
+
+    pi.write(pin_enable, 1)
+
+def build_pulses(pin_step: int, freq_table:list[float], duty: float) -> list[pigpio.pulse]:
     pulses = []
     gpio_mask = 1 << pin_step
 
@@ -59,8 +89,32 @@ def create_ramp_waveform(
             raise ValueError(f"Frequency {freq}Hz with duty {duty}% " f"produces sub‑microsecond pulse. Reduce freq or adjust duty")
         add_pulse_pair(pulses, gpio_mask, high_time, low_time)
 
-    # Build wave
-    #pi.wave_clear()                # free all old waveforms to avoid memory leak
+    return pulses
+
+def create_ramp_waveform(
+        pi: pigpio.pi,
+        accel_steps: int,
+        decel_steps: int,
+        total_steps: int,
+        target_freq: int,
+        start_freq: int,
+        pin_step: int,
+        duty: float) -> int:
+
+    if accel_steps + decel_steps > total_steps:
+        raise ValueError("accel_steps + decel_steps must be ≤ total_steps")
+
+    freq_table = build_frequency_table(
+        accel_steps=accel_steps,
+        decel_steps=decel_steps,
+        total_steps=total_steps,
+        target_freq=target_freq,
+        start_freq=start_freq,
+    )
+
+    # Build pulses
+    pulses = build_pulses(pin_step, freq_table, duty)
+
     pi.wave_add_generic(pulses)     # add new waveform
     wave_id = pi.wave_create()      # create the wave and get the ID
 

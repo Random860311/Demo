@@ -33,12 +33,15 @@ def register_motor_events(socketio: SocketIO):
     def handle_start_motor(data):
         motor_id = data.get("motorId")
         direction = data.get("direction", True)
+        infinite = data.get("infinite", False)
+
+        print("Start motor", motor_id, direction, infinite)
 
         if not isinstance(direction, bool):
             return {"status": "error", "message": "'direction' must be a boolean."}
 
         try:
-            motor_service.run_motor(motor_id, forward=direction)
+            motor_service.run_motor(motor_id, forward=direction, infinite = infinite)
             return {
                 "status": "success",
                 "message": f"Motor {motor_id} started",
@@ -52,6 +55,7 @@ def register_motor_events(socketio: SocketIO):
     @socketio.on("motor:stop")
     def handle_stop_motor(data):
         motor_id = data.get("motorId")
+        print("Stop motor", motor_id)
         try:
             motor_service.stop_motor(motor_id)
             return {"status": "success", "message": f"Motor {motor_id} stopped"}

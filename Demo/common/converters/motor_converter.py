@@ -1,6 +1,5 @@
 from dto.motor_dto import MotorDto
 from db.model.motor_model import MotorModel
-from db.model.pin_model import PinModel
 from common.converters.pin_converter import pin_model_to_dto
 
 def motor_model_to_dto(motor_model: MotorModel) -> MotorDto:

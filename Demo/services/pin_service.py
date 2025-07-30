@@ -1,4 +1,4 @@
-import pigpio
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from db.model.pin_model import PinModel
@@ -8,7 +8,7 @@ from common.converters.pin_converter import pin_model_to_dto
 from db.model.db_config import db_obj
 from db.model.motor_model import MotorModel
 
-pi = pigpio.pi()  # shared pigpio connection
+
 
 def is_pin_available(pin_id: int) -> bool:
     pin = get_pin(pin_id)
