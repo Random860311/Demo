@@ -1,7 +1,6 @@
 from enum import Enum
-from core.event.base_event import Event
 
-class MotorStatus(str, Enum, Event):
+class MotorStatus(str, Enum):
     STOPPED = "stopped"
     RUNNING = "running"
     FAULTED = "faulted"

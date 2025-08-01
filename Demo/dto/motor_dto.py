@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 from dto.pin_dto import PinDto
+from common import utils
 
 @dataclass
 class MotorDto:
@@ -22,11 +23,11 @@ class MotorDto:
 
     @property
     def total_steps(self) -> int:
-        return 0 if self.angle <= 0 else round((360 / self.angle) * self.total_turns)
+        return utils.calculate_motor_total_steps(self.angle, self.total_turns)
 
     @property
     def total_turns(self) -> float:
-        return self.turns if (self.distance <= 0 or self.distance_per_turn <= 0) else self.distance / self.distance_per_turn
+        return utils.calculate_motor_total_turns(self.turns, self.distance, self.distance_per_turn)
 
     @staticmethod
     def from_dict(data: dict) -> "MotorDto":

@@ -1,32 +1,38 @@
 from threading import Lock
-from typing import Callable, Dict, List
-from core.event.base_event import Event
+from typing import Callable, Dict, List, Any, TypeVar
+from core.event.base_event import BaseEvent
+import inspect
+import asyncio
+
+E = TypeVar("E", bound=BaseEvent)
 
 class EventDispatcher:
     def __init__(self):
-        self._subscribers: Dict[str, List[Callable]] = {}
+        self._subscribers: Dict[str, List[Callable[[BaseEvent], None]]] = {}
         self._lock = Lock()
 
-    def subscribe(self, event: Event, callback: Callable):
-        event_name = event.get_event_name()
+    def subscribe(self, event_name: str, callback: Callable[[E], None]):
         with self._lock:
-            if event_name not in self._subscribers:
-                self._subscribers[event_name] = []
-            if callback not in self._subscribers[event_name]:
-                self._subscribers[event_name].append(callback)
+            self._subscribers.setdefault(event_name, []).append(callback)
 
-    def unsubscribe(self, event: Event, callback: Callable):
-        event_name = event.get_event_name()
+    def unsubscribe(self, event_name: str, callback: Callable[[E], None]):
         with self._lock:
             if event_name in self._subscribers and callback in self._subscribers[event_name]:
                 self._subscribers[event_name].remove(callback)
 
-    def emit(self, event: Event, *args, **kwargs):
-        event_name = event.get_event_name()
+    def emit(self, event: E):
         with self._lock:
-            callbacks = list(self._subscribers.get(event_name, []))
+            callbacks = list(self._subscribers.get(event.event_name, []))
+
         for cb in callbacks:
-            cb(*args, **kwargs)
+            try:
+                if inspect.iscoroutinefunction(cb):
+                    asyncio.create_task(cb(event))
+                else:
+                    cb(event)
+            except Exception as e:
+                print(f"Error in subscriber '{cb}': {e}")
+                # logger.error(f"Error in subscriber '{cb}': {e}")
 
 
 # Singleton instance

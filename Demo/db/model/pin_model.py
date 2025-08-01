@@ -1,16 +1,16 @@
 from common.PinType import PinType
-from db.model.db_config import db_obj
+from db.model.db_config import db_app
 
 
-class PinModel(db_obj.Model):
+class PinModel(db_app.Model):
     __tablename__ = 'pins'
 
-    id = db_obj.Column(db_obj.Integer, primary_key=True)
-    pigpio_pin_number = db_obj.Column(db_obj.Integer, nullable=True)
-    physical_pin_number = db_obj.Column(db_obj.Integer, nullable=False, unique=True)
-    in_use = db_obj.Column(db_obj.Boolean, default=False)
-    description = db_obj.Column(db_obj.String(100))
-    pin_type = db_obj.Column(db_obj.Enum(PinType), nullable=False)
+    id = db_app.Column(db_app.Integer, primary_key=True)
+    pigpio_pin_number = db_app.Column(db_app.Integer, nullable=True)
+    physical_pin_number = db_app.Column(db_app.Integer, nullable=False, unique=True)
+    in_use = db_app.Column(db_app.Boolean, default=False)
+    description = db_app.Column(db_app.String(100))
+    pin_type = db_app.Column(db_app.Enum(PinType), nullable=False)
 
 
 PIN_MAP = [

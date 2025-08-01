@@ -1,5 +1,10 @@
-from abc import ABC, abstractmethod
-class Event(ABC):
-    @abstractmethod
-    def get_event_name(self) -> str:
-        pass
+from abc import ABC
+from typing import TypeVar, Generic, Optional
+
+EventData = TypeVar("EventData")
+
+class BaseEvent(Generic[EventData], ABC):
+    def __init__(self, event_name: str, data: Optional[EventData] = None):
+        self.event_name = event_name
+        self.data = data
+

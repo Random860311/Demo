@@ -1,11 +1,12 @@
-from db.model.db_config import db_obj
+from db.model.db_config import db_app
 
-class DeviceModel(db_obj.Model):
+
+class DeviceModel(db_app.Model):
     __tablename__ = 'devices'
 
-    id = db_obj.Column(db_obj.Integer, primary_key=True)
-    name = db_obj.Column(db_obj.String(50), nullable=False)
-    type = db_obj.Column(db_obj.String(50))  # for polymorphic identity
+    id = db_app.Column(db_app.Integer, primary_key=True)
+    name = db_app.Column(db_app.String(50), nullable=False)
+    type = db_app.Column(db_app.String(50))  # for polymorphic identity
 
     __mapper_args__ = {
         'polymorphic_identity': 'device',

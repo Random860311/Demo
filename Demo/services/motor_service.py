@@ -1,50 +1,62 @@
+from typing import Optional
 
+from core.event.base_event import BaseEvent
+from core.event.event_dispatcher import EventDispatcher
+from db.dao.motor_dao import MotorDao
+from servomotor.controller_status import MotorStatus
+from servomotor.event.controller_pwm_event import ControllerPWMEvent
 from . import pigpio_service
 from common.converters import motor_converter
 from common.converters.motor_converter import motor_model_to_dto
-from db.model.motor_model import MotorModel
-from db.model.db_config import db_obj
 
 from dto.motor_dto import MotorDto
-from services import pin_service
+from .base_service import BaseService
 
-def get_all() -> list[MotorDto]:
-    motor_models = MotorModel.query.all()
-    return [motor_model_to_dto(motor_model) for motor_model in motor_models]
 
-def get_motor(motor_id: int) -> MotorDto | None:
-    motor_model = MotorModel.query.get(motor_id)
-    return motor_model_to_dto(motor_model) if motor_model else None
+class MotorService(BaseService):
 
-def get_motor_status(motor_id: int) -> str:
-    controller = pigpio_service.get_controller(motor_id)
-    return controller.status if controller else "not_configured"
+    def __init__(self, dispatcher: EventDispatcher, pigpio: pigpio_service.PigpioService, motor_dao: MotorDao):
+        super().__init__(dispatcher)
 
-def run_motor(motor_id: int, forward: bool = True, infinite: bool = False) -> bool:
-    controller = pigpio_service.get_controller(motor_id)
+        self.__pigpio_service = pigpio
+        self.__motor_dao = motor_dao
 
-    if controller:
-        controller.run(forward=forward, infinite=infinite) # asyncio.create_task()
-        return True
-    return False
+        self._subscribe_to_events()
 
-def stop_motor(motor_id: int) -> bool:
-    controller = pigpio_service.get_controller(motor_id)
-    if controller:
+    @staticmethod
+    def get_all() -> list[MotorDto]:
+        motor_models = MotorDao.get_all()
+        return [motor_model_to_dto(motor_model) for motor_model in motor_models]
+
+    @staticmethod
+    def get_motor(motor_id: int) -> Optional[MotorDto]:
+        motor_model = MotorDao.get_by_id(motor_id)
+        return motor_model_to_dto(motor_model) if motor_model else None
+
+    def get_motor_status(self, motor_id: int) -> str:
+        controller = self.__pigpio_service.get_controller(motor_id)
+        return controller.status
+
+    def run_motor(self, motor_id: int, forward: bool = True, infinite: bool = False):
+        controller = self.__pigpio_service.get_controller(motor_id)
+        controller.run(forward=forward, infinite=infinite)
+
+    def stop_motor(self, motor_id: int):
+        controller = self.__pigpio_service.get_controller(motor_id)
         controller.stop()
-        return True
-    return False
 
-def update_motor(motor_dto: MotorDto) -> MotorDto:
-    """
-    Update motor controller and db configuration, this method does not update pins configuration
-    :param motor_dto: new motor configuration
-    :return: The new configuration
-    """
-    with db_obj.session.begin():
-        existing_motor_model = MotorModel.query.get(motor_dto.id)
+    def update_motor(self, motor_dto: MotorDto) -> MotorDto:
+        existing_motor_model = MotorDao.get_by_id(motor_dto.id)
         motor_converter.motor_dto_to_model(motor_dto, existing_motor_model)
-        pigpio_service.update_controller(motor_dto)
+        self.__motor_dao.update_motor(existing_motor_model)
 
         return motor_dto
+
+    def _handle_controller_status_change(self, event: ControllerPWMEvent):
+        pass
+
+    def _subscribe_to_events(self):
+        self._dispatcher.subscribe(MotorStatus.RUNNING, self._handle_controller_status_change)
+        self._dispatcher.subscribe(MotorStatus.FAULTED, self._handle_controller_status_change)
+        self._dispatcher.subscribe(MotorStatus.STOPPED, self._handle_controller_status_change)
 

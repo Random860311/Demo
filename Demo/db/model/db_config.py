@@ -1,22 +1,31 @@
-import flask.app
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from web import app
+
+from core.di_container import container
+
+
+db_app = SQLAlchemy()
 
 init_done = False
 
-db_obj = SQLAlchemy()
-#db_obj.init_app(app.app)
 
-
-def initialize():
-    from db.dao import pin_dao, motor_dao
+def db_initialize():
+    from db.dao.motor_dao import MotorDao
+    from db.dao.pin_dao import PinDao
 
     global init_done
 
     if not init_done:
         print("Creating tables...")
-        with app.app.app_context():
-            db_obj.create_all()
+        app = container.resolve(Flask)
+
+        with app.app_context():
+
+            db_app.create_all()
+
+            pin_dao = container.resolve(PinDao)
+            motor_dao = container.resolve(MotorDao)
+
             pin_dao.seed_default_pins()
             motor_dao.seed_default_motors()
 
