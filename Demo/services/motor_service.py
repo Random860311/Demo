@@ -1,10 +1,9 @@
 from typing import Optional
-
-from core.event.base_event import BaseEvent
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
 from servomotor.controller_status import MotorStatus
 from servomotor.event.controller_pwm_event import ControllerPWMEvent
+from web.events.motor_event import MotorUpdatedEvent, MotorStatusChangedEvent
 from . import pigpio_service
 from common.converters import motor_converter
 from common.converters.motor_converter import motor_model_to_dto
@@ -50,13 +49,14 @@ class MotorService(BaseService):
         motor_converter.motor_dto_to_model(motor_dto, existing_motor_model)
         self.__motor_dao.update_motor(existing_motor_model)
 
+        self._dispatcher.emit(MotorUpdatedEvent(motor_dto))
+
         return motor_dto
 
     def _handle_controller_status_change(self, event: ControllerPWMEvent):
-        pass
+        print("MotorService: _handle_controller_status_change:", event.__dict__)
+        self._dispatcher.emit(MotorStatusChangedEvent(motor_id=event.data, status=event.key))
 
     def _subscribe_to_events(self):
-        self._dispatcher.subscribe(MotorStatus.RUNNING, self._handle_controller_status_change)
-        self._dispatcher.subscribe(MotorStatus.FAULTED, self._handle_controller_status_change)
-        self._dispatcher.subscribe(MotorStatus.STOPPED, self._handle_controller_status_change)
+        self._dispatcher.subscribe(ControllerPWMEvent, self._handle_controller_status_change)
 

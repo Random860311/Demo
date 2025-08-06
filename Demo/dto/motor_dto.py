@@ -1,10 +1,12 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Any
+
+from core.serializable import Serializable
 from dto.pin_dto import PinDto
 from common import utils
 
 @dataclass
-class MotorDto:
+class MotorDto(Serializable):
     id: int
     name: str
     pin_step: PinDto|None
@@ -52,7 +54,7 @@ class MotorDto:
     def from_list(data: list) -> List["MotorDto"]:
         return [MotorDto.from_dict(**motor) for motor in data]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,

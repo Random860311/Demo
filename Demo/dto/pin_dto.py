@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 from common.PinType import PinType
+from core.serializable import Serializable
 
 
 @dataclass
-class PinDto:
+class PinDto(Serializable):
     id: int
     physical_pin_number: int
     pigpio_pin_number: Optional[int]
@@ -16,7 +17,7 @@ class PinDto:
     def from_dict(data: dict) -> "PinDto":
         return PinDto(**data)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "physical_pin_number": self.physical_pin_number,

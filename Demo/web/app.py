@@ -5,7 +5,7 @@ from db.model.db_config import db_app
 
 import traceback
 
-from web.events.responses import Response, EStatusCode
+from web.events.response import Response, EStatusCode
 
 flask_app = Flask(__name__)
 

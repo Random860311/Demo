@@ -1,8 +1,8 @@
 import eventlet
 eventlet.monkey_patch()
 
-from web.events.motor_handler import MotorHandler
-from web.events.pin_handler import PinHandler
+from web.handlers.motor_handler import MotorHandler
+from web.handlers.pin_handler import PinHandler
 
 from db.dao.motor_dao import MotorDao
 from db.dao.pin_dao import PinDao
@@ -33,13 +33,16 @@ container.register_singleton(MotorDao, lambda : MotorDao(db_app, container.resol
 
 container.register_singleton(PigpioService, lambda: PigpioService())
 container.register_singleton(PinService, lambda: PinService())
-container.register_singleton(MotorService, lambda: MotorService(
-    dispatcher=dispatcher,
-    pigpio=container.resolve(PigpioService),
-    motor_dao=container.resolve(MotorDao)))
+container.register_singleton(MotorService, lambda: MotorService(dispatcher=dispatcher,
+                                                                pigpio=container.resolve(PigpioService),
+                                                                motor_dao=container.resolve(MotorDao)))
 
-container.register_singleton(PinHandler, lambda: PinHandler(socketio, container.resolve(PinService)))
-container.register_singleton(MotorHandler, lambda: MotorHandler(socketio, container.resolve(MotorService)))
+container.register_singleton(PinHandler, lambda: PinHandler(dispatcher=dispatcher,
+                                                            socketio=socketio,
+                                                            pin_services=container.resolve(PinService)))
+container.register_singleton(MotorHandler, lambda: MotorHandler(dispatcher=dispatcher,
+                                                                socketio=socketio,
+                                                                motor_services=container.resolve(MotorService)))
 
 if __name__ == '__main__':
     cert_path = "web/certs/cert.pem"

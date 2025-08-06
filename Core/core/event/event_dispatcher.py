@@ -1,5 +1,5 @@
 from threading import Lock
-from typing import Callable, Dict, List, Any, TypeVar
+from typing import Callable, Dict, List, Any, TypeVar, Type, Union
 from core.event.base_event import BaseEvent
 import inspect
 import asyncio
@@ -11,18 +11,32 @@ class EventDispatcher:
         self._subscribers: Dict[str, List[Callable[[BaseEvent], None]]] = {}
         self._lock = Lock()
 
-    def subscribe(self, event_name: str, callback: Callable[[E], None]):
+    @staticmethod
+    def resolve_event_name(event: Union[Type[E] | str]) -> str:
+        if isinstance(event, str):
+            return event
+        elif issubclass(event, BaseEvent):
+            return event.__name__
+        else:
+            raise ValueError("event must be a string or BaseEvent subclass")
+
+    def subscribe(self, event: Union[Type[E] | str], callback: Callable[[E], None]):
+        event_name = EventDispatcher.resolve_event_name(event)
         with self._lock:
             self._subscribers.setdefault(event_name, []).append(callback)
 
-    def unsubscribe(self, event_name: str, callback: Callable[[E], None]):
+    def unsubscribe(self, event: str, callback: Callable[[E], None]):
+        event_name = EventDispatcher.resolve_event_name(event)
         with self._lock:
             if event_name in self._subscribers and callback in self._subscribers[event_name]:
                 self._subscribers[event_name].remove(callback)
 
     def emit(self, event: E):
         with self._lock:
-            callbacks = list(self._subscribers.get(event.event_name, []))
+            event_name = EventDispatcher.resolve_event_name(type(event))
+            callbacks = list(self._subscribers.get(event_name, []))
+            if not callbacks:
+                callbacks = list(self._subscribers.get(event.key, []))
 
         for cb in callbacks:
             try:

@@ -1,11 +1,15 @@
 from flask_socketio import SocketIO
+
+from core.event.event_dispatcher import EventDispatcher
 from services.pin_service import PinService
-from web.events.event_types import PinEventType
-from web.events.responses import Response, EStatusCode
+from web.events.pin_event import PinEventType
+from web.events.response import Response, EStatusCode
+from web.handlers.base_handler import BaseHandler
 
 
-class PinHandler:
-    def __init__(self, socketio: SocketIO, pin_services: PinService):
+class PinHandler(BaseHandler):
+    def __init__(self, dispatcher: EventDispatcher, socketio: SocketIO, pin_services: PinService):
+        super().__init__(dispatcher)
         self.__socketio = socketio
         self.__pin_service = pin_services
 

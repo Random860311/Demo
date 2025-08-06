@@ -8,7 +8,12 @@ class EStatusCode(str, Enum):
     ERROR = "error"
 
 class Response:
-    def __init__(self, status_code: EStatusCode, message: Optional[str]=None, obj_id: Optional[int]=None, obj: Optional[dict]=None, list_obj: Optional[list[dict]]=None):
+    def __init__(self,
+                 status_code: EStatusCode,
+                 message: Optional[str]=None,
+                 obj_id: Optional[int]=None,
+                 obj: Optional[dict]=None,
+                 list_obj: Optional[list[dict]]=None):
         self.status = status_code
         self.message = message
         self.obj_id = obj_id
