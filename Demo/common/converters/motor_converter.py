@@ -12,9 +12,6 @@ def motor_model_to_dto(motor_model: MotorModel) -> MotorDto:
         angle=motor_model.angle,
         target_freq=motor_model.target_freq,
         duty=motor_model.duty,
-        start_freq=motor_model.start_freq,
-        accel_steps=motor_model.accel_steps,
-        decel_steps=motor_model.decel_steps,
 
         turns=motor_model.turns,
         distance=motor_model.distance,
@@ -31,12 +28,9 @@ def motor_model_to_dto(motor_model: MotorModel) -> MotorDto:
 
 def motor_dto_to_model(dto: MotorDto, motor_model: MotorModel):
     motor_model.name = dto.name if dto.name else f"Motor {dto.id}"
-    motor_model.start_freq = dto.start_freq
     motor_model.target_freq = dto.target_freq
     motor_model.angle = dto.angle
     motor_model.duty = dto.duty
-    motor_model.accel_steps = dto.accel_steps
-    motor_model.decel_steps = dto.decel_steps
     motor_model.turns = dto.turns
     motor_model.distance = dto.distance
     motor_model.distance_per_turn = dto.distance_per_turn

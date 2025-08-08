@@ -74,12 +74,9 @@ class MotorDao:
                 pin_step=pin_step,
                 pin_forward=pin_forward,
                 pin_enable=pin_enable,
-                start_freq=100,
                 target_freq=300,
                 angle=1.8,
                 duty=50,
-                accel_steps=0,
-                decel_steps=0,
                 turns=1
             )
             self.__db.session.add(motor)

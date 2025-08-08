@@ -11,12 +11,9 @@ class MotorModel(DeviceModel):
     pin_forward_id = db_app.Column(db_app.Integer, db_app.ForeignKey('pins.id'), nullable=True, default=None)
     pin_enable_id = db_app.Column(db_app.Integer, db_app.ForeignKey('pins.id'), nullable=True, default=None)
 
-    start_freq = db_app.Column(db_app.Float, nullable=False)
     target_freq = db_app.Column(db_app.Float, nullable=False)
     angle = db_app.Column(db_app.Float, nullable=False)
     duty = db_app.Column(db_app.Float, nullable=False)
-    accel_steps = db_app.Column(db_app.Integer, nullable=True, default=0)
-    decel_steps = db_app.Column(db_app.Integer, nullable=True, default=0)
     turns = db_app.Column(db_app.Float, default=1)
     distance = db_app.Column(db_app.Float, default=0)
     distance_per_turn = db_app.Column(db_app.Float, default=0)

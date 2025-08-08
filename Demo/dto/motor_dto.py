@@ -15,9 +15,6 @@ class MotorDto(Serializable):
     angle: float
     target_freq: float
     duty: float
-    start_freq: float
-    accel_steps: int
-    decel_steps: int
 
     turns: float = 1
     distance: float = 0
@@ -42,9 +39,6 @@ class MotorDto(Serializable):
             angle=data["angle"],
             target_freq=data["target_freq"],
             duty=data["duty"],
-            start_freq=data["start_freq"],
-            accel_steps=data["accel_steps"],
-            decel_steps=data["decel_steps"],
             turns=data.get("turns", 1),
             distance=data.get("distance", 0),
             distance_per_turn=data.get("distance_per_turn", 0),
@@ -64,9 +58,6 @@ class MotorDto(Serializable):
             "angle": self.angle,
             "target_freq": self.target_freq,
             "duty": self.duty,
-            "start_freq": self.start_freq,
-            "accel_steps": self.accel_steps,
-            "decel_steps": self.decel_steps,
             "distance": self.distance,
             "distance_per_turn": self.distance_per_turn,
             "turns": self.total_turns,

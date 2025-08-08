@@ -20,6 +20,6 @@ class MotorUpdatedEvent(BaseEvent[MotorDto]):
 class MotorStatusChangedEvent(BaseEvent[str]):
     def __init__(self, motor_id: int, status: str):
         super().__init__(key=MotorEventType.STATUS_CHANGED, data= {
-            motor_id: motor_id,
-            status: status
+            "motor_id": motor_id,
+            "status": status
         })

@@ -31,7 +31,12 @@ class MotorHandler(BaseHandler):
 
     def _emit_event(self, event: BaseEvent):
         try:
-            data = event.data.to_dict() if isinstance(event.data, Serializable) else event.data.__dict__ if event.data else None
+            data = (
+                event.data.to_dict() if isinstance(event.data, Serializable)
+                else event.data if isinstance(event.data, dict)
+                else getattr(event.data, "__dict__", {})
+            )
+
             self.__socketio.emit(event.key, data)
         except Exception as e:
             print("Error in MotorHandler, _emit_event: ", str(e), str(event.key), event.__dict__)
