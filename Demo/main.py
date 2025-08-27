@@ -1,6 +1,9 @@
 import eventlet
 eventlet.monkey_patch()
 
+from core.dao.base_motor_dao import BaseMotorDao
+from servomotor.tracker.position_tracker import PositionTracker
+
 from web.handlers.motor_handler import MotorHandler
 from web.handlers.pin_handler import PinHandler
 
@@ -22,27 +25,52 @@ from flask_socketio import SocketIO
 from web.app import flask_app, socketio
 import ssl
 
-
+# Register SQLAlchemy App
 container.register_instance(SQLAlchemy, db_app)
+
+# Register Flask App
 container.register_instance(Flask, flask_app)
+
+# Register SocketIO
 container.register_instance(SocketIO, socketio)
+
+# Register Event Manager
 container.register_instance(EventDispatcher, dispatcher)
 
-container.register_singleton(PinDao, lambda: PinDao(db_app))
-container.register_singleton(MotorDao, lambda : MotorDao(db_app, container.resolve(PinDao)))
+# Register DAOs
+# Register PinDao
+container.register_factory(PinDao, lambda: PinDao(db_app))
 
-container.register_singleton(PigpioService, lambda: PigpioService())
-container.register_singleton(PinService, lambda: PinService())
-container.register_singleton(MotorService, lambda: MotorService(dispatcher=dispatcher,
-                                                                pigpio=container.resolve(PigpioService),
-                                                                motor_dao=container.resolve(MotorDao)))
+# Register MotorDao
+motor_dao = MotorDao(flask_app, db_app, container.resolve_singleton(PinDao))
+container.register_instance(MotorDao, motor_dao)
+container.register_instance(BaseMotorDao, motor_dao)
 
-container.register_singleton(PinHandler, lambda: PinHandler(dispatcher=dispatcher,
-                                                            socketio=socketio,
-                                                            pin_services=container.resolve(PinService)))
-container.register_singleton(MotorHandler, lambda: MotorHandler(dispatcher=dispatcher,
-                                                                socketio=socketio,
-                                                                motor_services=container.resolve(MotorService)))
+# Register Services
+# Register PigpioService
+container.register_factory(PigpioService, lambda: PigpioService(motor_dao=motor_dao))
+
+# Register PinService
+container.register_factory(PinService, lambda: PinService())
+
+# Register MotorService
+container.register_factory(MotorService, lambda: MotorService(dispatcher=dispatcher,
+                                                              pigpio=container.resolve_singleton(PigpioService),
+                                                              motor_dao=container.resolve_singleton(MotorDao)))
+
+# Register SocketIO Handlers
+# Register PinHandler
+container.register_factory(PinHandler, lambda: PinHandler(dispatcher=dispatcher,
+                                                          socketio=socketio,
+                                                          pin_services=container.resolve_singleton(PinService)))
+
+# Register MotorHandler
+container.register_factory(MotorHandler, lambda: MotorHandler(dispatcher=dispatcher,
+                                                              socketio=socketio,
+                                                              motor_services=container.resolve_singleton(MotorService)))
+
+# Register Helpers
+container.register_factory(PositionTracker, lambda *args, **kwargs: PositionTracker(*args, **{**kwargs, "motor_dao": motor_dao, "events_dispatcher": dispatcher})) #motor_dao to override any caller-supplied value
 
 if __name__ == '__main__':
     cert_path = "web/certs/cert.pem"
@@ -53,8 +81,8 @@ if __name__ == '__main__':
 
     db_initialize()
 
-    pin_handler = container.resolve(PinHandler)
-    motor_handler = container.resolve(MotorHandler)
+    pin_handler = container.resolve_singleton(PinHandler)
+    motor_handler = container.resolve_singleton(MotorHandler)
 
     pin_handler.register_handlers()
     motor_handler.register_handlers()

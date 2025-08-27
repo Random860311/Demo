@@ -4,7 +4,8 @@ from core.event.base_event import BaseEvent
 import inspect
 import asyncio
 
-E = TypeVar("E", bound=BaseEvent)
+E = TypeVar("E")
+# E = TypeVar("E", bound=BaseEvent)
 
 class EventDispatcher:
     def __init__(self):
@@ -15,10 +16,11 @@ class EventDispatcher:
     def resolve_event_name(event: Union[Type[E] | str]) -> str:
         if isinstance(event, str):
             return event
-        elif issubclass(event, BaseEvent):
-            return event.__name__
-        else:
-            raise ValueError("event must be a string or BaseEvent subclass")
+        return event.__name__
+        # elif issubclass(event, BaseEvent):
+        #     return event.__name__
+        # else:
+        #     raise ValueError("event must be a string or BaseEvent subclass")
 
     def subscribe(self, event: Union[Type[E] | str], callback: Callable[[E], None]):
         event_name = EventDispatcher.resolve_event_name(event)

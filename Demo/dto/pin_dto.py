@@ -11,7 +11,6 @@ class PinDto(Serializable):
     pigpio_pin_number: Optional[int]
     pin_type: PinType
     description: str
-    in_use: bool
 
     @staticmethod
     def from_dict(data: dict) -> "PinDto":
@@ -24,7 +23,6 @@ class PinDto(Serializable):
             "pigpio_pin_number": self.pigpio_pin_number,
             "pin_type": self.pin_type if isinstance(self.pin_type, str) else self.pin_type.value,
             "description": self.description,
-            "in_use": self.in_use,
         }
 
     # "pin_type": self.pin_type.value,

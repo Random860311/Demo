@@ -4,6 +4,8 @@ from typing import List, Any
 from core.serializable import Serializable
 from dto.pin_dto import PinDto
 from common import utils
+from servomotor.controller_status import EMotorStatus
+
 
 @dataclass
 class MotorDto(Serializable):
@@ -13,8 +15,11 @@ class MotorDto(Serializable):
     pin_forward: PinDto|None
     pin_enable: PinDto|None
     angle: float
-    target_freq: float
+    target_freq: int
     duty: float
+    position: int
+
+    status: EMotorStatus = EMotorStatus.STOPPED
 
     turns: float = 1
     distance: float = 0
@@ -42,6 +47,8 @@ class MotorDto(Serializable):
             turns=data.get("turns", 1),
             distance=data.get("distance", 0),
             distance_per_turn=data.get("distance_per_turn", 0),
+            position=data.get("position", 0),
+            status=EMotorStatus(data.get("status", EMotorStatus.STOPPED))
         )
 
     @staticmethod
@@ -62,4 +69,6 @@ class MotorDto(Serializable):
             "distance_per_turn": self.distance_per_turn,
             "turns": self.total_turns,
             "total_steps": self.total_steps,
+            "position": self.position,
+            "status": self.status,
         }

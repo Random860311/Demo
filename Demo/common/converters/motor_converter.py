@@ -15,7 +15,8 @@ def motor_model_to_dto(motor_model: MotorModel) -> MotorDto:
 
         turns=motor_model.turns,
         distance=motor_model.distance,
-        distance_per_turn=motor_model.distance_per_turn
+        distance_per_turn=motor_model.distance_per_turn,
+        position=motor_model.position,
 
     )
     if motor_model.pin_step:
@@ -34,6 +35,7 @@ def motor_dto_to_model(dto: MotorDto, motor_model: MotorModel):
     motor_model.turns = dto.turns
     motor_model.distance = dto.distance
     motor_model.distance_per_turn = dto.distance_per_turn
+    motor_model.position = dto.position
 
     return motor_model
 

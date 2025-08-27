@@ -1,7 +1,5 @@
 from abc import ABC
-from typing import TypeVar, Generic, Optional, Any
-
-from core.serializable import Serializable
+from typing import TypeVar, Generic, Optional
 
 EventData = TypeVar("EventData")
 

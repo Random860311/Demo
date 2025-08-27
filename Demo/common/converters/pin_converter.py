@@ -8,5 +8,4 @@ def pin_model_to_dto(pin: PinModel) -> PinDto:
         pigpio_pin_number=pin.pigpio_pin_number,
         pin_type=pin.pin_type,
         description=pin.description,
-        in_use=pin.in_use
     )

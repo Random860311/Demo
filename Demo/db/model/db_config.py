@@ -11,22 +11,19 @@ init_done = False
 
 def db_initialize():
     from db.dao.motor_dao import MotorDao
-    from db.dao.pin_dao import PinDao
 
     global init_done
 
     if not init_done:
         print("Creating tables...")
-        app = container.resolve(Flask)
+        app = container.resolve_singleton(Flask)
 
         with app.app_context():
 
             db_app.create_all()
 
-            pin_dao = container.resolve(PinDao)
-            motor_dao = container.resolve(MotorDao)
+            motor_dao = container.resolve_singleton(MotorDao)
 
-            pin_dao.seed_default_pins()
             motor_dao.seed_default_motors()
 
             init_done = True
