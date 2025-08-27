@@ -41,6 +41,7 @@ class PigpioService:
                     dispatcher=self.__event_dispatcher,
                     pi=self.get_pi(),
                     controller_id=motor_id,
+                    current_position=motor_model.position,
                     pin_enable= -1 if not motor_model.pin_enable else motor_model.pin_enable.pigpio_pin_number,
                     pin_forward= -1 if not motor_model.pin_forward else motor_model.pin_forward.pigpio_pin_number,
                     pin_step= -1 if not motor_model.pin_step else motor_model.pin_step.pigpio_pin_number,
@@ -61,9 +62,9 @@ class PigpioService:
         if controller.status == EMotorStatus.RUNNING:
             raise ValueError(f"Motor {motor_dto.id} is already running, cannot update.")
         with self._lock:
-            controller.pin_enable = -1 if not motor_dto.pin_enable else motor_dto.pin_enable.pigpio_pin_number
-            controller.pin_forward = -1 if not motor_dto.pin_forward else motor_dto.pin_forward.pigpio_pin_number
-            controller.pin_step = -1 if not motor_dto.pin_step else motor_dto.pin_step.pigpio_pin_number
+            # controller.pin_enable = -1 if not motor_dto.pin_enable else motor_dto.pin_enable.pigpio_pin_number
+            # controller.pin_forward = -1 if not motor_dto.pin_forward else motor_dto.pin_forward.pigpio_pin_number
+            # controller.pin_step = -1 if not motor_dto.pin_step else motor_dto.pin_step.pigpio_pin_number
             controller.target_freq = motor_dto.target_freq
             controller.duty = motor_dto.duty
             controller.total_steps = motor_dto.total_steps

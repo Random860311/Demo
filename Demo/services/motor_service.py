@@ -46,6 +46,7 @@ class MotorService(BaseService):
 
     def run_motor(self, motor_id: int, forward: bool = True, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP):
         controller = self.__pigpio_service.get_controller(motor_id)
+        print(f"MotorService run_motor: {motor_id} forward: {forward} run_mode: {run_mode}")
         controller.run(forward=forward, run_mode=run_mode)
 
     def stop_motor(self, motor_id: int):
@@ -55,18 +56,21 @@ class MotorService(BaseService):
     def update_motor(self, motor_dto: MotorDto) -> MotorDto:
         existing_motor_model = self.__motor_dao.get_by_id(motor_dto.id)
         motor_converter.motor_dto_to_model(motor_dto, existing_motor_model)
+
         self.__motor_dao.update_motor(existing_motor_model)
-
+        self.__pigpio_service.update_controller(motor_dto)
         self._dispatcher.emit_async(MotorUpdatedEvent(motor_dto))
-
+        print(f"MotorService update_motor: {motor_dto.id}, {motor_dto.position}")
         return motor_dto
 
     def _handle_controller_status_change(self, event: MotorStatusData):
         motor_dto = self.get_motor(event.motor_id)
         motor_dto.status = event.status
         motor_dto.position = event.position
+        self.__motor_dao.update_motor_position(event.motor_id, event.position)
         self._dispatcher.emit_async(MotorUpdatedEvent(motor_dto))
-        #self._dispatcher.emit(MotorStatusChangedEvent(data=event))
+
+        print(f"MotorService _handle_controller_status_change: {motor_dto.id}, {motor_dto.position}")
 
     def _subscribe_to_events(self):
         self._dispatcher.subscribe(MotorStatusData, self._handle_controller_status_change)

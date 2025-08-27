@@ -92,11 +92,14 @@ container.register_factory(
 )
 
 # Register Helpers
-container.register_factory(
-    PositionTracker,
-    lambda *args, **kwargs: PositionTracker(*args,
-                                            **{**kwargs, "motor_dao": motor_dao, "events_dispatcher": dispatcher})
-) #motor_dao to override any caller-supplied value
+# container.register_factory(
+#     PositionTracker,
+#     lambda *args, **kwargs: PositionTracker()
+# )
+# container.register_factory(
+#     PositionTracker,
+#     lambda *args, **kwargs: PositionTracker(*args,
+#                                             **{**kwargs, "events_dispatcher": dispatcher})
 
 if __name__ == '__main__':
     cert_path = "web/certs/cert.pem"

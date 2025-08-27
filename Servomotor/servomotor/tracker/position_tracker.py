@@ -6,13 +6,11 @@ from core.event.event_dispatcher import EventDispatcher
 
 
 class PositionTracker:
-    def __init__(self, motor_id: int, motor_dao: BaseMotorDao, events_dispatcher: EventDispatcher):
+    def __init__(self, current_position: int):
         self._pos_lock = RLock()
         self._motion_lock = RLock()
-        self._motor_dao = motor_dao
 
-        self._motor_id: int = motor_id
-        self._current_steps = motor_dao.get_motor_position(self._motor_id)
+        self._current_steps = current_position #motor_dao.get_motor_position(self._motor_id)
 
         # motion context
         self._active: bool = False
@@ -21,19 +19,18 @@ class PositionTracker:
         self._start_ts: Optional[float] = None      # monotonic start
         self._freq_hz: Optional[float] = None
         self._applied_steps: int = 0                # steps already applied since start
-        self._events_dispatcher = events_dispatcher
 
-    def save(self):
-        try:
-            print("Updating motor: ", self._motor_id, " position: ", self._current_steps)
-            self._motor_dao.update_motor_position(self._motor_id, self._current_steps)
-        except Exception as e:
-            print(f"Failed to update motor: {self._motor_id} position: {self._current_steps}", e)
+    # def save(self):
+    #     try:
+    #         print("Updating motor: ", self._motor_id, " position: ", self._current_steps)
+    #         self._motor_dao.update_motor_position(self._motor_id, self._current_steps)
+    #     except Exception as e:
+    #         print(f"Failed to update motor: {self._motor_id} position: {self._current_steps}", e)
 
     def set_home(self) -> None:
         with self._pos_lock:
             self._current_steps = 0
-        self.save()
+        # self.save()
 
     def get_steps(self) -> int:
         with self._pos_lock:
@@ -79,7 +76,7 @@ class PositionTracker:
 
             return delta
 
-    def finish_motion(self, save: bool = True) -> None:
+    def finish_motion(self) -> None:
         """Call after PWM stops or on abort to account actual steps from elapsed time * freq."""
         with self._motion_lock:
             if not self._active or self._start_ts is None or self._freq_hz is None:
@@ -94,9 +91,6 @@ class PositionTracker:
             self._dir_sign = +1
             self._start_ts = None
             self._freq_hz = None
-
-            if save:
-                self.save()
 
     def _compute_delta_steps(self, now_ts: float) -> int:
         """

@@ -16,6 +16,7 @@ class ControllerPWM:
                  dispatcher: EventDispatcher,
                  pi: pigpio.pi,
                  controller_id: int,
+                 current_position: int,
                  total_steps: int,
                  target_freq: int,
                  pin_step: int,
@@ -44,7 +45,8 @@ class ControllerPWM:
         self.__pi.set_mode(self.__pin_enable, pigpio.OUTPUT)
         self.__pi.write(self.__pin_enable, 0)   # ensure initially the service is stopped
 
-        self.__tracker = container.resolve_new(PositionTracker, motor_id=controller_id)
+        print(f"Initializing tracker for controller {controller_id} with position {current_position}")
+        self.__tracker = PositionTracker(current_position=current_position)
 
     @property
     def pi(self) -> pigpio.pi:
@@ -140,7 +142,7 @@ class ControllerPWM:
             self.__pi.hardware_PWM(self.__pin_step, 0, 0)
 
             # Account actual steps
-            self.__tracker.finish_motion(save=True)
+            self.__tracker.finish_motion()
 
             # Update controller status
             self.status = EMotorStatus.STOPPED
@@ -175,7 +177,6 @@ class ControllerPWM:
                     case EControllerRunMode.INFINITE:
                         programmed = 0
 
-                #programmed = 0 if run_mode else int(self.total_steps)  # 0 => unbounded for infinite
                 # Begin motion context
                 self.__tracker.begin_motion(programmed_steps=programmed, forward=forward, freq_hz=float(self.target_freq))
 
@@ -192,7 +193,7 @@ class ControllerPWM:
                     # Sleep the thread for the calculated duration to move the desired steps
                     # Stop method is called in the finally block
                     duration = programmed / self.target_freq
-                    print(f"Moving {programmed} steps in {duration} seconds: {self.__controller_id}")
+                    print(f"Moving motor: {self.__controller_id}, {programmed} steps for {duration} seconds")
                     self.__abort_event.wait(duration)
                 else:
                     print(f"Started infinite movement: {self.__controller_id}")

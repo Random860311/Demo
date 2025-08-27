@@ -69,7 +69,6 @@ class MotorHandler(BaseHandler):
     def handle_stop_motor(self, data) -> dict[str, Any]:
         try:
             motor_id = data.get("motorId")
-            print("Stop motor", motor_id)
             self.__motor_service.stop_motor(motor_id)
 
             return Response(status_code=EStatusCode.SUCCESS, message="Motor updated", obj_id=motor_id).__dict__
