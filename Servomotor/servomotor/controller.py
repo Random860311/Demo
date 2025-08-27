@@ -4,7 +4,7 @@ import pigpio
 import threading
 
 from core.di_container import container
-from core.event.event_dispatcher import dispatcher
+from core.event.event_dispatcher import EventDispatcher
 from servomotor.controller_run_mode import EControllerRunMode
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
@@ -13,6 +13,7 @@ from servomotor.tracker.position_tracker import PositionTracker
 
 class ControllerPWM:
     def __init__(self,
+                 dispatcher: EventDispatcher,
                  pi: pigpio.pi,
                  controller_id: int,
                  total_steps: int,
@@ -22,6 +23,7 @@ class ControllerPWM:
                  pin_enable: int,
                  duty: float = 50):
 
+        self.__event_dispatcher = dispatcher
         self.__pi = pi
         self.__controller_id = controller_id
         self.__total_steps = total_steps
@@ -115,7 +117,7 @@ class ControllerPWM:
         while self.__status == EMotorStatus.RUNNING:
             # compute current position in memory
             self.__tracker.tick()
-            dispatcher.emit(MotorStatusData(self.__controller_id, self.__status, self.__tracker.get_steps()))
+            self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.__status, self.__tracker.get_steps()))
 
             # interruptible sleep (breaks instantly when stop() sets the event)
             if self.__abort_event.wait(0.5):
@@ -143,7 +145,7 @@ class ControllerPWM:
             # Update controller status
             self.status = EMotorStatus.STOPPED
 
-            dispatcher.emit(MotorStatusData(self.__controller_id, self.status, self.__tracker.get_steps()))
+            self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.status, self.__tracker.get_steps()))
         except Exception as e:
             print(f"Error stopping services: {e}")
             self.status = EMotorStatus.FAULTED

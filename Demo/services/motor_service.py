@@ -57,7 +57,7 @@ class MotorService(BaseService):
         motor_converter.motor_dto_to_model(motor_dto, existing_motor_model)
         self.__motor_dao.update_motor(existing_motor_model)
 
-        self._dispatcher.emit(MotorUpdatedEvent(motor_dto))
+        self._dispatcher.emit_async(MotorUpdatedEvent(motor_dto))
 
         return motor_dto
 
@@ -65,7 +65,7 @@ class MotorService(BaseService):
         motor_dto = self.get_motor(event.motor_id)
         motor_dto.status = event.status
         motor_dto.position = event.position
-        self._dispatcher.emit(MotorUpdatedEvent(motor_dto))
+        self._dispatcher.emit_async(MotorUpdatedEvent(motor_dto))
         #self._dispatcher.emit(MotorStatusChangedEvent(data=event))
 
     def _subscribe_to_events(self):

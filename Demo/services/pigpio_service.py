@@ -1,5 +1,6 @@
 import pigpio
 
+from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
 from dto.motor_dto import MotorDto
 from common import utils
@@ -9,7 +10,8 @@ from typing import Dict
 import threading
 
 class PigpioService:
-    def __init__(self, motor_dao: MotorDao):
+    def __init__(self, motor_dao: MotorDao, dispatcher: EventDispatcher):
+        self.__event_dispatcher = dispatcher
         self.__pi = pigpio.pi()
         self._controller_pool: Dict[int, ControllerPWM] = {}
         self._lock = threading.Lock()
@@ -36,6 +38,7 @@ class PigpioService:
 
                 print(f"Creating controller for motor: {motor_id}")
                 controller = ControllerPWM(
+                    dispatcher=self.__event_dispatcher,
                     pi=self.get_pi(),
                     controller_id=motor_id,
                     pin_enable= -1 if not motor_model.pin_enable else motor_model.pin_enable.pigpio_pin_number,
