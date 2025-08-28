@@ -5,17 +5,17 @@ from servomotor.controller_run_mode import EControllerRunMode
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
 from web.events.motor_event import MotorUpdatedEvent
-from . import pigpio_service
 from common.converters import motor_converter
 from common.converters.motor_converter import motor_model_to_dto
 
 from dto.motor_dto import MotorDto
 from .base_service import BaseService
+from .pigpio_service import PigpioService
 
 
 class MotorService(BaseService):
 
-    def __init__(self, dispatcher: EventDispatcher, pigpio: pigpio_service.PigpioService, motor_dao: MotorDao):
+    def __init__(self, dispatcher: EventDispatcher, pigpio: PigpioService, motor_dao: MotorDao):
         super().__init__(dispatcher)
 
         self.__pigpio_service = pigpio

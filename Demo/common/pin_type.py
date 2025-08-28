@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class PinType(str, Enum):
+class EPinType(str, Enum):
     POWER = "POWER"
     PWM = "PWM"
     GENERAL = "GENERAL"

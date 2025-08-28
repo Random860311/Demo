@@ -63,7 +63,9 @@ container.register_factory(
 # Register PinService
 container.register_factory(
     PinService,
-    lambda: PinService()
+    lambda: PinService(dispatcher=dispatcher,
+                       pigpio=container.resolve_singleton(PigpioService),
+                       socketio=socketio)
 )
 
 # Register MotorService
@@ -112,11 +114,13 @@ if __name__ == '__main__':
 
     pin_handler = container.resolve_singleton(PinHandler)
     motor_handler = container.resolve_singleton(MotorHandler)
+    pin_service = container.resolve_singleton(PinService)
 
     pin_handler.register_handlers()
     motor_handler.register_handlers()
 
-    print("SocketIO async_mode:", socketio.async_mode)
+    pin_service.start_listening_pins()
+
     socketio.run(
         flask_app,
         host="0.0.0.0",

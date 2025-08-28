@@ -2,9 +2,7 @@ from typing import Any
 
 from flask_socketio import SocketIO
 
-from core.event.base_event import BaseEvent
 from core.event.event_dispatcher import EventDispatcher
-from core.serializable import Serializable
 from dto.motor_dto import MotorDto
 
 
@@ -17,29 +15,17 @@ from web.handlers.base_handler import BaseHandler
 
 class MotorHandler(BaseHandler):
     def __init__(self, dispatcher: EventDispatcher, socketio: SocketIO, motor_services: MotorService):
-        super().__init__(dispatcher)
-        self.__socketio = socketio
+        super().__init__(dispatcher, socketio)
+
         self.__motor_service = motor_services
 
     def register_handlers(self):
-        self.__socketio.on_event(message=EMotorEventType.GET_ALL, handler=self.handle_get_all)
-        self.__socketio.on_event(message=EMotorEventType.UPDATE, handler=self.handle_update_motor)
-        self.__socketio.on_event(message=EMotorEventType.STOP, handler=self.handle_stop_motor)
-        self.__socketio.on_event(message=EMotorEventType.START, handler=self.handle_start_motor)
+        self._socketio.on_event(message=EMotorEventType.GET_ALL, handler=self.handle_get_all)
+        self._socketio.on_event(message=EMotorEventType.UPDATE, handler=self.handle_update_motor)
+        self._socketio.on_event(message=EMotorEventType.STOP, handler=self.handle_stop_motor)
+        self._socketio.on_event(message=EMotorEventType.START, handler=self.handle_start_motor)
 
         self._dispatcher.subscribe(MotorUpdatedEvent, self._emit_event)
-
-    def _emit_event(self, event: BaseEvent):
-        try:
-            data = (
-                event.data.to_dict() if isinstance(event.data, Serializable)
-                else event.data if isinstance(event.data, dict)
-                else getattr(event.data, "__dict__", {})
-            )
-
-            self.__socketio.emit(event.key, data)
-        except Exception as e:
-            print("Error in MotorHandler, _emit_event: ", str(e), str(event.key), event.__dict__)
 
     def handle_get_all(self, data) -> dict[str, Any]:
         try:
@@ -58,10 +44,7 @@ class MotorHandler(BaseHandler):
             motor_dto = MotorDto.from_dict(data)
             motor_updated = self.__motor_service.update_motor(motor_dto)
 
-            return Response(status_code=EStatusCode.SUCCESS, message=f"Motor {motor_dto.name} updated", obj_id=motor_dto.id).__dict__
-
-            # self.__socketio.emit("motor:updated", motor_updated.to_dict())  # socketio.emit("motor:updated", motor.__dict__)
-            # return {"status": "success", "motor_id": motor_updated.id}
+            return Response(status_code=EStatusCode.SUCCESS, message=f"Motor {motor_updated.name} updated", obj_id=motor_updated.id).__dict__
         except Exception as e:
             print("Error in MotorHandler, handle_update_motor: ", str(e))
             return Response(status_code=EStatusCode.ERROR, message="Error updating motor.").__dict__

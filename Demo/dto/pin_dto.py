@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Any
-from common.PinType import PinType
+from common.pin_type import EPinType
 from core.serializable import Serializable
 
 
@@ -9,8 +9,9 @@ class PinDto(Serializable):
     id: int
     physical_pin_number: int
     pigpio_pin_number: Optional[int]
-    pin_type: PinType
+    pin_type: EPinType
     description: str
+    status: bool = False
 
     @staticmethod
     def from_dict(data: dict) -> "PinDto":
@@ -21,8 +22,9 @@ class PinDto(Serializable):
             "id": self.id,
             "physical_pin_number": self.physical_pin_number,
             "pigpio_pin_number": self.pigpio_pin_number,
-            "pin_type": self.pin_type if isinstance(self.pin_type, str) else self.pin_type.value,
+            "pin_type": self.pin_type,
             "description": self.description,
+            "status": self.status
         }
 
     # "pin_type": self.pin_type.value,
