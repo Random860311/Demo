@@ -8,6 +8,9 @@ from db.model.motor_model import MotorModel
 from db.dao.pin_dao import PinDao
 from flask_sqlalchemy import SQLAlchemy
 
+from dto.motor_dto import MotorDto
+
+
 class MotorDao(BaseMotorDao, BaseDao):
 
     def __init__(self,app: Flask, db: SQLAlchemy, pin_dao: PinDao):
@@ -38,6 +41,38 @@ class MotorDao(BaseMotorDao, BaseDao):
             with self._db.session.begin_nested():
                 self._db.session.merge(motor_model)
                 return motor_model
+
+    def set_home_all(self) -> list[MotorModel]:
+        with self._app.app_context():
+            with self._db.session.begin_nested():
+                motors = MotorModel.query.all()
+                for motor in motors:
+                    motor.home = motor.position
+                    motor.position = 0
+                return motors
+
+    def set_origin_all(self) -> list[MotorModel]:
+        with self._app.app_context():
+            with self._db.session.begin_nested():
+                motors = MotorModel.query.all()
+                for motor in motors:
+                    motor.origin = motor.position
+                return motors
+
+    @staticmethod
+    def to_model(dto: MotorDto, motor_model: MotorModel):
+        motor_model.name = dto.name if dto.name else f"Motor {dto.id}"
+        motor_model.target_freq = dto.target_freq
+        motor_model.angle = dto.angle
+        motor_model.duty = dto.duty
+        motor_model.turns = dto.turns
+        motor_model.distance = dto.distance
+        motor_model.distance_per_turn = dto.distance_per_turn
+        motor_model.position = dto.position
+        motor_model.home = dto.home
+        motor_model.origin = dto.origin
+
+        return motor_model
 
     def seed_default_motors(self):
         if MotorModel.query.count() > 0:

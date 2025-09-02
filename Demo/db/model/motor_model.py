@@ -21,6 +21,8 @@ class MotorModel(DeviceModel):
     distance_per_turn = db_app.Column(db_app.Float, default=0)
 
     position = db_app.Column(db_app.Integer, default=0)
+    origin = db_app.Column(db_app.Integer, nullable=True)
+    home = db_app.Column(db_app.Integer, nullable=True)
 
     @property
     def pin_step(self) -> Optional[PinModel]:

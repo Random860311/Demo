@@ -57,3 +57,13 @@ class PinService(BaseService):
 
     def _subscribe_to_events(self):
         pass
+
+    @staticmethod
+    def to_dto(pin: PinModel) -> PinDto:
+        return PinDto(
+            id=pin.id,
+            physical_pin_number=pin.physical_pin_number,
+            pigpio_pin_number=pin.pigpio_pin_number,
+            pin_type=pin.pin_type,
+            description=pin.description,
+        )

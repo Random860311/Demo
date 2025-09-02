@@ -10,6 +10,13 @@ class EMotorEventType(str, Enum):
     UPDATE = "motor:update"                     # Request to update motor
     STOP = "motor:stop"                         # Request to stop motor
     START = "motor:start"                       # Request to start motor
+    SET_HOME_ALL = "motor:set_home_all"         # Request to set all motors home
+    SET_ORIGIN_ALL = "motor:set_origin_all"     # Request to set all motors origins
+    MOVE_TO_HOME_ALL = "motor:move_to_home_all"
+    MOVE_TO_HOME = "motor:move_to_home"
+    MOVE_TO_ORIGIN_ALL = "motor:move_to_origin_all"
+    MOVE_TO_ORIGIN = "motor:move_to_origin"
+
     UPDATED = "motor:updated"                   # Broadcast motor updated
     STATUS_CHANGED = "motor:status_changed"     # Broadcast motor status changed
     POSITION_CHANGED = "motor:position_changed" # Broadcast motor position changed

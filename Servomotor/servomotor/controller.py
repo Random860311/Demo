@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 import pigpio
 import threading
@@ -154,7 +155,7 @@ class ControllerPWM:
             raise e
 
 
-    def run(self, forward: bool = True, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP):
+    def run(self, forward: bool = True, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP, steps: Optional[int] = None):
         if self.status == EMotorStatus.RUNNING:
             return
 
@@ -173,7 +174,7 @@ class ControllerPWM:
                     case EControllerRunMode.SINGLE_STEP:
                         programmed = 1
                     case EControllerRunMode.CONFIG:
-                        programmed = int(self.total_steps)
+                        programmed = int(self.total_steps) if steps is None else steps
                     case EControllerRunMode.INFINITE:
                         programmed = 0
 

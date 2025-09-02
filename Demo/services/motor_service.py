@@ -1,16 +1,16 @@
 from typing import Optional
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
+from db.model.motor_model import MotorModel
 from servomotor.controller_run_mode import EControllerRunMode
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
 from web.events.motor_event import MotorUpdatedEvent
-from common.converters import motor_converter
-from common.converters.motor_converter import motor_model_to_dto
 
 from dto.motor_dto import MotorDto
 from .base_service import BaseService
 from .pigpio_service import PigpioService
+from .pin_service import PinService
 
 
 class MotorService(BaseService):
@@ -28,7 +28,7 @@ class MotorService(BaseService):
         motor_dtos: list[MotorDto]= []
 
         for motor_model in motor_models:
-            dto = motor_model_to_dto(motor_model)
+            dto = MotorService.to_dto(motor_model)
             # dto.status = self.get_motor_status(motor_model.id)
             motor_dtos.append(dto)
 
@@ -36,18 +36,92 @@ class MotorService(BaseService):
 
     def get_motor(self, motor_id: int) -> Optional[MotorDto]:
         motor_model = self.__motor_dao.get_by_id(motor_id)
-        motor_dto = motor_model_to_dto(motor_model) if motor_model else None
+        motor_dto = MotorService.to_dto(motor_model) if motor_model else None
         motor_dto.status = self.get_motor_status(motor_id)
 
         return motor_dto
 
+    def set_home_all(self):
+        if self.__pigpio_service.is_any_controller_running():
+            raise ValueError("Cannot set home to all motors when some motors are still running.")
+
+        models = self.__motor_dao.set_home_all()
+        self.__pigpio_service.set_all_controllers_home()
+
+        for model in models:
+            dto = MotorService.to_dto(model)
+            self._dispatcher.emit_async(MotorUpdatedEvent(dto))
+
+    def set_origin_all(self):
+        if self.__pigpio_service.is_any_controller_running():
+            raise ValueError("Cannot set origin to all motors when some motors are still running.")
+
+        models = self.__motor_dao.set_origin_all()
+        for model in models:
+            dto = MotorService.to_dto(model)
+            self._dispatcher.emit_async(MotorUpdatedEvent(dto))
+
     def get_motor_status(self, motor_id: int) -> EMotorStatus:
         return self.__pigpio_service.get_controller_status(motor_id)
 
-    def run_motor(self, motor_id: int, forward: bool = True, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP):
+    def move_to_home(self, motor_id: int):
+        if self.__pigpio_service.is_controller_running(motor_id):
+            raise ValueError(f"Cannot move to home to motor {motor_id} when it is still running.")
+        model = self.__motor_dao.get_by_id(motor_id)
+        self.__move_to_home(model)
+
+    def move_to_home_all(self):
+        if self.__pigpio_service.is_any_controller_running():
+            raise ValueError("Cannot move to home to all motors when some motors are still running.")
+
+        models = self.__motor_dao.get_all()
+        for model in models:
+            self.__move_to_home(model)
+
+    def move_to_origin(self, motor_id: int):
+        if self.__pigpio_service.is_controller_running(motor_id):
+            raise ValueError(f"Cannot move to origin to motor {motor_id} when it is still running.")
+        model = self.__motor_dao.get_by_id(motor_id)
+        self.__move_to_origin(model)
+
+    def move_to_origin_all(self):
+        if self.__pigpio_service.is_any_controller_running():
+            raise ValueError("Cannot move to origin to all motors when some motors are still running.")
+
+        models = self.__motor_dao.get_all()
+        for model in models:
+            self.__move_to_origin(model)
+
+    def __move_to_home(self, motor_model: MotorModel):
+        if not motor_model.home or motor_model.home == motor_model.position:
+            return
+        direction_forward = motor_model.position < motor_model.home
+        stepsize = abs(motor_model.home - motor_model.position)
+        print(f"move_to_home: {motor_model.id} forward: {direction_forward} stepsize: {stepsize} home: {motor_model.home} position: {motor_model.position}")
+        self.run_motor(motor_model.id, forward=direction_forward, run_mode=EControllerRunMode.CONFIG, steps=stepsize)
+        print("Finished move_to_home")
+
+    def __move_to_origin(self, motor_model: MotorModel):
+        if not motor_model.origin or motor_model.origin == motor_model.position:
+            return
+        direction_forward = motor_model.position < motor_model.origin
+        stepsize = abs(motor_model.origin - motor_model.position)
+        print(f"move_to_origin: {motor_model.id} forward: {direction_forward} stepsize: {stepsize} origin: {motor_model.origin} position: {motor_model.position}")
+        self.run_motor(motor_model.id, forward=direction_forward, run_mode=EControllerRunMode.CONFIG, steps=stepsize)
+        print("Finished move_to_origin")
+
+    def run_motor(self, motor_id: int, forward: bool = True, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP, steps: Optional[int] = None):
+        model = self.__motor_dao.get_by_id(motor_id)
+        if (not model) or (not model.home) or (not model.origin):
+            raise ValueError(f"Motor {motor_id} does not have home or origin set.")
+        if self.__pigpio_service.is_controller_running(motor_id):
+            raise ValueError(f"Motor {motor_id} is already running.")
+
         controller = self.__pigpio_service.get_controller(motor_id)
-        print(f"MotorService run_motor: {motor_id} forward: {forward} run_mode: {run_mode}")
-        controller.run(forward=forward, run_mode=run_mode)
+        if controller.status == EMotorStatus.RUNNING:
+            raise ValueError(f"Motor {motor_id} is already running.")
+
+        controller.run(forward=forward, run_mode=run_mode, steps=steps)
 
     def stop_motor(self, motor_id: int):
         controller = self.__pigpio_service.get_controller(motor_id)
@@ -55,7 +129,7 @@ class MotorService(BaseService):
 
     def update_motor(self, motor_dto: MotorDto) -> MotorDto:
         existing_motor_model = self.__motor_dao.get_by_id(motor_dto.id)
-        motor_converter.motor_dto_to_model(motor_dto, existing_motor_model)
+        MotorDao.to_model(motor_dto, existing_motor_model)
 
         self.__motor_dao.update_motor(existing_motor_model)
         self.__pigpio_service.update_controller(motor_dto)
@@ -70,8 +144,34 @@ class MotorService(BaseService):
         self.__motor_dao.update_motor_position(event.motor_id, event.position)
         self._dispatcher.emit_async(MotorUpdatedEvent(motor_dto))
 
-        print(f"MotorService _handle_controller_status_change: {motor_dto.id}, {motor_dto.position}")
+        #print(f"MotorService _handle_controller_status_change: {motor_dto.id}, {motor_dto.position}")
 
     def _subscribe_to_events(self):
         self._dispatcher.subscribe(MotorStatusData, self._handle_controller_status_change)
+
+    @staticmethod
+    def to_dto(motor_model: MotorModel) -> MotorDto:
+        motor_dto = MotorDto(
+            id=motor_model.id,
+            name=motor_model.name,
+            pin_step=None,
+            pin_forward=None,
+            pin_enable=None,
+            angle=motor_model.angle,
+            target_freq=motor_model.target_freq,
+            duty=motor_model.duty,
+
+            turns=motor_model.turns,
+            distance=motor_model.distance,
+            distance_per_turn=motor_model.distance_per_turn,
+            position=motor_model.position,
+
+        )
+        if motor_model.pin_step:
+            motor_dto.pin_step = PinService.to_dto(motor_model.pin_step)
+        if motor_model.pin_forward:
+            motor_dto.pin_forward = PinService.to_dto(motor_model.pin_forward)
+        if motor_model.pin_enable:
+            motor_dto.pin_enable = PinService.to_dto(motor_model.pin_enable)
+        return motor_dto
 

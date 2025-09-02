@@ -38,6 +38,22 @@ class PigpioService:
             status[gpio] = (self.get_gpio_pin_status(gpio))
         return status
 
+    def is_any_controller_running(self) -> bool:
+        with self._lock:
+            for _, controller in self._controller_pool.items():
+                if controller.status == EMotorStatus.RUNNING:
+                    return True
+            return False
+
+    def is_controller_running(self, motor_id: int) -> bool:
+        controller = self.get_controller(motor_id)
+        return controller.status == EMotorStatus.RUNNING
+
+    def set_all_controllers_home(self):
+        with self._lock:
+            for _, controller in self._controller_pool.items():
+                controller.set_home()
+
     def get_controller_status(self, motor_id: int) -> EMotorStatus:
         controller = self.get_controller(motor_id)
         return controller.status

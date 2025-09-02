@@ -24,8 +24,68 @@ class MotorHandler(BaseHandler):
         self._socketio.on_event(message=EMotorEventType.UPDATE, handler=self.handle_update_motor)
         self._socketio.on_event(message=EMotorEventType.STOP, handler=self.handle_stop_motor)
         self._socketio.on_event(message=EMotorEventType.START, handler=self.handle_start_motor)
+        self._socketio.on_event(message=EMotorEventType.SET_HOME_ALL, handler=self.handle_set_home_all)
+        self._socketio.on_event(message=EMotorEventType.SET_ORIGIN_ALL, handler=self.handle_set_origin_all)
+        self._socketio.on_event(message=EMotorEventType.MOVE_TO_HOME_ALL, handler=self.handle_move_to_home_all)
+        self._socketio.on_event(message=EMotorEventType.MOVE_TO_HOME, handler=self.handle_move_to_home)
+        self._socketio.on_event(message=EMotorEventType.MOVE_TO_ORIGIN_ALL, handler=self.handle_move_to_origin_all)
+        self._socketio.on_event(message=EMotorEventType.MOVE_TO_ORIGIN, handler=self.handle_move_to_origin)
 
         self._dispatcher.subscribe(MotorUpdatedEvent, self._emit_event)
+
+    def handle_move_to_origin(self, data):
+        try:
+            self.__motor_service.move_to_origin(int(data.get("motorId")))
+
+            return Response(status_code=EStatusCode.SUCCESS).__dict__
+        except Exception as e:
+            print(f"Error in MotorHandler, handle_move_to_origin: {data}", str(e))
+            return Response(status_code=EStatusCode.ERROR, message="Error moving motors to origin.").__dict__
+
+
+    def handle_move_to_origin_all(self, data):
+        try:
+            self.__motor_service.move_to_origin_all()
+
+            return Response(status_code=EStatusCode.SUCCESS).__dict__
+        except Exception as e:
+            print("Error in MotorHandler, handle_move_to_origin_all: ", str(e))
+            return Response(status_code=EStatusCode.ERROR, message="Error moving motors to origin.").__dict__
+
+    def handle_move_to_home(self, data):
+        try:
+            self.__motor_service.move_to_home(int(data.get("motorId")))
+            return Response(status_code=EStatusCode.SUCCESS).__dict__
+        except Exception as e:
+            print(f"Error in MotorHandler, handle_move_to_home: {data}", str(e))
+            return Response(status_code=EStatusCode.ERROR, message="Error moving motors to home.").__dict__
+
+    def handle_move_to_home_all(self, data):
+        try:
+            self.__motor_service.move_to_home_all()
+
+            return Response(status_code=EStatusCode.SUCCESS).__dict__
+        except Exception as e:
+            print("Error in MotorHandler, handle_move_to_home_all: ", str(e))
+            return Response(status_code=EStatusCode.ERROR, message="Error moving motors to home.").__dict__
+
+    def handle_set_origin_all(self, data):
+        try:
+            self.__motor_service.set_origin_all()
+
+            return Response(status_code=EStatusCode.SUCCESS).__dict__
+        except Exception as e:
+            print("Error in MotorHandler, handle_set_origin_all: ", str(e))
+            return Response(status_code=EStatusCode.ERROR, message="Error setting motors origin.").__dict__
+
+    def handle_set_home_all(self, data):
+        try:
+            self.__motor_service.set_home_all()
+
+            return Response(status_code=EStatusCode.SUCCESS).__dict__
+        except Exception as e:
+            print("Error in MotorHandler, handle_set_home_all: ", str(e))
+            return Response(status_code=EStatusCode.ERROR, message="Error setting motors home.").__dict__
 
     def handle_get_all(self, data) -> dict[str, Any]:
         try:
@@ -33,11 +93,9 @@ class MotorHandler(BaseHandler):
             motors = [dto.to_dict() for dto in dto_list]
 
             return Response(status_code=EStatusCode.SUCCESS, list_obj=motors).__dict__
-            # return motors
         except Exception as e:
             print("Error in MotorHandler, handle_get_all: ", str(e))
             return Response(status_code=EStatusCode.ERROR, message="Error fetching motors.").__dict__
-            # return {"status": "error"}
 
     def handle_update_motor(self, data) -> dict[str, Any]:
         try:
