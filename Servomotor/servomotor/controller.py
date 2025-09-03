@@ -1,12 +1,7 @@
-import time
-from typing import Optional
-
 import pigpio
 import threading
 
-from core.di_container import container
 from core.event.event_dispatcher import EventDispatcher
-from servomotor.controller_run_mode import EControllerRunMode
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
 from servomotor.tracker.position_tracker import PositionTracker
@@ -18,7 +13,6 @@ class ControllerPWM:
                  pi: pigpio.pi,
                  controller_id: int,
                  current_position: int,
-                 total_steps: int,
                  target_freq: int,
                  pin_step: int,
                  pin_forward: int,
@@ -28,7 +22,6 @@ class ControllerPWM:
         self.__event_dispatcher = dispatcher
         self.__pi = pi
         self.__controller_id = controller_id
-        self.__total_steps = total_steps
         self.__target_freq = target_freq
         self.__pin_step = pin_step
         self.__pin_forward = pin_forward
@@ -55,13 +48,6 @@ class ControllerPWM:
     @pi.setter
     def pi(self, value: pigpio.pi):
         self.__pi = value
-
-    @property
-    def total_steps(self) -> int:
-        return self.__total_steps
-    @total_steps.setter
-    def total_steps(self, value: int):
-        self.__total_steps = value
 
     @property
     def target_freq(self) -> int:
@@ -155,8 +141,9 @@ class ControllerPWM:
             raise e
 
 
-    def run(self, forward: bool = True, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP, steps: Optional[int] = None):
+    def run(self, forward: bool = True, steps: int = 1):
         if self.status == EMotorStatus.RUNNING:
+            print(f"Motor {self.__controller_id} is already running.")
             return
 
         def worker():
@@ -170,43 +157,31 @@ class ControllerPWM:
                 # Set direction
                 self.__pi.write(self.__pin_forward, 1 if forward else 0)
 
-                match run_mode:
-                    case EControllerRunMode.SINGLE_STEP:
-                        programmed = 1
-                    case EControllerRunMode.CONFIG:
-                        programmed = int(self.total_steps) if steps is None else steps
-                    case EControllerRunMode.INFINITE:
-                        programmed = 0
-
                 # Begin motion context
-                self.__tracker.begin_motion(programmed_steps=programmed, forward=forward, freq_hz=float(self.target_freq))
+                self.__tracker.begin_motion(programmed_steps=steps, forward=forward, freq_hz=float(self.target_freq))
 
                 #Start running
                 result = self.__pi.hardware_PWM(self.__pin_step, self.target_freq, int(self.duty * 10_000))
 
                 if result != 0:
                     # Something went wrong
-                    print(f"Error setting PWM: {result}")
-                    self.stop()
-                    return
+                    print(f"Error starting PWM: {self.__controller_id} code: {result}")
+                    raise Exception(f"Error starting PWM: {self.__controller_id} code: {result}")
 
-                if run_mode != EControllerRunMode.INFINITE:
+                # NOT Infinite
+                if steps > 0:
                     # Sleep the thread for the calculated duration to move the desired steps
-                    # Stop method is called in the finally block
-                    duration = programmed / self.target_freq
-                    print(f"Moving motor: {self.__controller_id}, {programmed} steps for {duration} seconds")
+                    duration = steps / self.target_freq
+                    print(f"Moving motor: {self.__controller_id}, {steps} steps for {duration} seconds")
                     self.__abort_event.wait(duration)
+                    self.stop()
                 else:
                     print(f"Started infinite movement: {self.__controller_id}")
 
             except Exception as e:
-                print(f"Error running services: {e}")
+                print(f"Error running motor: {self.__controller_id} {e}")
                 self.status = EMotorStatus.FAULTED
                 self.stop()
                 raise e
-            finally:
-                # Wait for the stop called manually if infinite
-                if run_mode != EControllerRunMode.INFINITE:
-                    self.stop()
 
         threading.Thread(target=worker, daemon=True).start()

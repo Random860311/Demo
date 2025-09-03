@@ -1,8 +1,6 @@
 from threading import RLock
 from typing import Optional
 import time
-from core.dao.base_motor_dao import BaseMotorDao
-from core.event.event_dispatcher import EventDispatcher
 
 
 class PositionTracker:
@@ -18,14 +16,8 @@ class PositionTracker:
         self._dir_sign: int = 1                     # +1 fwd, -1 rev
         self._start_ts: Optional[float] = None      # monotonic start
         self._freq_hz: Optional[float] = None
-        self._applied_steps: int = 0                # steps already applied since start
+        self._applied_steps: int = 0                # steps have already applied since start
 
-    # def save(self):
-    #     try:
-    #         print("Updating motor: ", self._motor_id, " position: ", self._current_steps)
-    #         self._motor_dao.update_motor_position(self._motor_id, self._current_steps)
-    #     except Exception as e:
-    #         print(f"Failed to update motor: {self._motor_id} position: {self._current_steps}", e)
 
     def set_home(self) -> None:
         with self._pos_lock:

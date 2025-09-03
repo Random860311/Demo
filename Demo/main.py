@@ -1,10 +1,15 @@
 import eventlet
 eventlet.monkey_patch()
 
-from event.app_event_dispatcher import AppEventDispatcher
+from db.dao.config_dao import ConfigDao
+from services.config_service import ConfigService
+from web.handlers.config_handler import ConfigHandler
 
-from core.dao.base_motor_dao import BaseMotorDao
-from servomotor.tracker.position_tracker import PositionTracker
+
+
+from services.controller_service import ControllerService
+
+from event.app_event_dispatcher import AppEventDispatcher
 
 from web.handlers.motor_handler import MotorHandler
 from web.handlers.pin_handler import PinHandler
@@ -44,13 +49,18 @@ container.register_instance(EventDispatcher, dispatcher)
 # Register PinDao
 container.register_factory(
     PinDao,
-    lambda: PinDao(db_app)
+    lambda: PinDao()
 )
 
 # Register MotorDao
 motor_dao = MotorDao(flask_app, db_app, container.resolve_singleton(PinDao))
 container.register_instance(MotorDao, motor_dao)
-container.register_instance(BaseMotorDao, motor_dao)
+
+# Register ConfigDao
+container.register_factory(
+    ConfigDao,
+    lambda: ConfigDao(flask_app, db_app)
+)
 
 # Register Services
 # Register PigpioService
@@ -58,6 +68,14 @@ container.register_factory(
     PigpioService,
     lambda: PigpioService(dispatcher=dispatcher,
                           motor_dao=motor_dao)
+)
+
+# Register ControllerService
+container.register_instance(
+    ControllerService,
+    ControllerService(dispatcher=dispatcher,
+                      pigpio=container.resolve_singleton(PigpioService),
+                      motor_dao=motor_dao)
 )
 
 # Register PinService
@@ -73,7 +91,15 @@ container.register_factory(
     MotorService,
     lambda: MotorService(dispatcher=dispatcher,
                          pigpio=container.resolve_singleton(PigpioService),
+                         controller_service=container.resolve_singleton(ControllerService),
                          motor_dao=container.resolve_singleton(MotorDao))
+)
+
+# Register ConfigService
+container.register_factory(
+    ConfigService,
+    lambda: ConfigService(dispatcher=dispatcher,
+                          config_dao=container.resolve_singleton(ConfigDao))
 )
 
 # Register SocketIO Handlers
@@ -91,6 +117,14 @@ container.register_factory(
     lambda: MotorHandler(dispatcher=dispatcher,
                          socketio=socketio,
                          motor_services=container.resolve_singleton(MotorService))
+)
+
+# Register ConfigHandler
+container.register_factory(
+    ConfigHandler,
+    lambda: ConfigHandler(dispatcher=dispatcher,
+                          socketio=socketio,
+                          config_services=container.resolve_singleton(ConfigService))
 )
 
 # Register Helpers
@@ -114,10 +148,13 @@ if __name__ == '__main__':
 
     pin_handler = container.resolve_singleton(PinHandler)
     motor_handler = container.resolve_singleton(MotorHandler)
+    config_handler = container.resolve_singleton(ConfigHandler)
+
     pin_service = container.resolve_singleton(PinService)
 
     pin_handler.register_handlers()
     motor_handler.register_handlers()
+    config_handler.register_handlers()
 
     pin_service.start_listening_pins()
 

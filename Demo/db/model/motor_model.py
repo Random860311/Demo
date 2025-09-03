@@ -16,9 +16,7 @@ class MotorModel(DeviceModel):
     target_freq = db_app.Column(db_app.Float, nullable=False)
     angle = db_app.Column(db_app.Float, nullable=False)
     duty = db_app.Column(db_app.Float, nullable=False)
-    turns = db_app.Column(db_app.Float, default=1)
-    distance = db_app.Column(db_app.Float, default=0)
-    distance_per_turn = db_app.Column(db_app.Float, default=0)
+    distance_per_turn = db_app.Column(db_app.Float, default=0, nullable=False)
 
     position = db_app.Column(db_app.Integer, default=0)
     origin = db_app.Column(db_app.Integer, nullable=True)

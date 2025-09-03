@@ -125,7 +125,8 @@ class MotorHandler(BaseHandler):
             direction = data.get("direction", True)
             run_mode = EControllerRunMode.from_value(data.get("runMode", 0))
 
-            self.__motor_service.run_motor(motor_id, forward=direction, run_mode= run_mode)
+            self.__motor_service.run_motor(motor_id=motor_id, run_mode=run_mode, distance=data.get("distance"), forward=direction)
+
             return Response(status_code=EStatusCode.SUCCESS, message="Motor started", obj_id=motor_id).__dict__
         except Exception as e:
             print("Error in MotorHandler, handle_start_motor: ", str(e))

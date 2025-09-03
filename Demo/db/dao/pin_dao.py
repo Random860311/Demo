@@ -6,9 +6,6 @@ from db.model.pin_model import PinModel, PIN_MAP
 
 
 class PinDao:
-    def __init__(self, db: SQLAlchemy):
-        self.__db = db
-
     @staticmethod
     def get_all() -> list[PinModel]:
         return list(PIN_MAP.values())

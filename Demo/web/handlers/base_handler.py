@@ -18,6 +18,7 @@ class BaseHandler(ABC):
     def _emit_event(self, event: BaseEvent):
         try:
             data = BaseHandler._to_payload(event.data)
+            # print("Emitting event: ", str(event.key), data)
             self._socketio.emit(event.key, data)
         except Exception as e:
             print("Error in _emit_event: ", str(e), str(event.key), event.__dict__)

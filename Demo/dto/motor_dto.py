@@ -3,7 +3,6 @@ from typing import List, Any, Optional
 
 from core.serializable import Serializable
 from dto.pin_dto import PinDto
-from common import utils
 from servomotor.controller_status import EMotorStatus
 
 
@@ -24,17 +23,7 @@ class MotorDto(Serializable):
     pin_forward: Optional[PinDto] = None
     pin_enable: Optional[PinDto] = None
 
-    turns: float = 1
-    distance: float = 0
     distance_per_turn: float = 0
-
-    @property
-    def total_steps(self) -> int:
-        return utils.calculate_motor_total_steps(self.angle, self.total_turns)
-
-    @property
-    def total_turns(self) -> float:
-        return utils.calculate_motor_total_turns(self.turns, self.distance, self.distance_per_turn)
 
     @staticmethod
     def from_dict(data: dict) -> "MotorDto":
@@ -47,8 +36,6 @@ class MotorDto(Serializable):
             angle=data["angle"],
             target_freq=data["target_freq"],
             duty=data["duty"],
-            turns=data.get("turns", 1),
-            distance=data.get("distance", 0),
             distance_per_turn=data.get("distance_per_turn", 0),
             position=data.get("position", 0),
             origin=data.get("origin", None),
@@ -70,10 +57,7 @@ class MotorDto(Serializable):
             "angle": self.angle,
             "target_freq": self.target_freq,
             "duty": self.duty,
-            "distance": self.distance,
             "distance_per_turn": self.distance_per_turn,
-            "turns": self.total_turns,
-            "total_steps": self.total_steps,
             "position": self.position,
             "origin": self.origin,
             "home": self.home,

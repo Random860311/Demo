@@ -2,8 +2,7 @@ from typing import Optional
 
 from flask import Flask
 
-from core.dao.base_motor_dao import BaseMotorDao
-from db.dao.base_dao import BaseDao
+from db.dao.base_dao import BaseDao, DatabaseDao
 from db.model.motor_model import MotorModel
 from db.dao.pin_dao import PinDao
 from flask_sqlalchemy import SQLAlchemy
@@ -11,11 +10,18 @@ from flask_sqlalchemy import SQLAlchemy
 from dto.motor_dto import MotorDto
 
 
-class MotorDao(BaseMotorDao, BaseDao):
-
+class MotorDao(DatabaseDao[MotorModel]):
     def __init__(self,app: Flask, db: SQLAlchemy, pin_dao: PinDao):
         super().__init__(app, db)
         self.__pin_dao = pin_dao
+
+    def get_by_id(self, obj_id: int) -> Optional[MotorModel]:
+        with self._app.app_context():
+            return MotorModel.query.get(obj_id)
+
+    def get_all(self) -> list[MotorModel]:
+        with self._app.app_context():
+            return MotorModel.query.all()
 
     def update_motor_position(self, motor_id: int, steps: int) -> None:
         with self._app.app_context():
@@ -27,14 +33,6 @@ class MotorDao(BaseMotorDao, BaseDao):
         with self._app.app_context():
             motor = MotorModel.query.get(motor_id)
             return motor.position
-
-    def get_by_id(self, motor_id: int) -> Optional[MotorModel]:
-        with self._app.app_context():
-            return MotorModel.query.get(motor_id)
-
-    def get_all(self) -> list[MotorModel]:
-        with self._app.app_context():
-            return MotorModel.query.all()
 
     def update_motor(self, motor_model: MotorModel) -> MotorModel:
         with self._app.app_context():
@@ -65,8 +63,6 @@ class MotorDao(BaseMotorDao, BaseDao):
         motor_model.target_freq = dto.target_freq
         motor_model.angle = dto.angle
         motor_model.duty = dto.duty
-        motor_model.turns = dto.turns
-        motor_model.distance = dto.distance
         motor_model.distance_per_turn = dto.distance_per_turn
         motor_model.position = dto.position
         motor_model.home = dto.home
