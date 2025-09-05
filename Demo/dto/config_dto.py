@@ -13,7 +13,7 @@ class ConfigDto(Serializable):
     @staticmethod
     def from_dict(data: dict) -> "ConfigDto":
         return ConfigDto(
-            id=data["id"],
+            id=data.get("id", 0),
             value_x=data.get("value_x"),
             value_y=data.get("value_y"),
             value_z=data.get("value_z"),
@@ -24,5 +24,5 @@ class ConfigDto(Serializable):
             "id": self.id,
             "value_x": self.value_x,
             "value_y": self.value_y,
-            "value_z": self.value_y,
+            "value_z": self.value_z,
         }

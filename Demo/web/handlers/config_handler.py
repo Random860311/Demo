@@ -43,7 +43,7 @@ class ConfigHandler(BaseHandler):
 
     def handle_get(self, data):
         try:
-            config_id = data.get("config_id")
+            config_id = data.get("configId")
             if id is None:
                 raise Exception("Config id is required to update")
             dto = self.__config_service.get_by_id(config_id)
@@ -55,7 +55,7 @@ class ConfigHandler(BaseHandler):
 
     def handle_delete(self, data):
         try:
-            config_id = data.get("config_id")
+            config_id = data.get("configId")
             if id is None:
                 raise Exception("Config id is required to delete")
             deleted_dto = self.__config_service.delete(config_id)

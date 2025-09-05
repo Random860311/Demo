@@ -3,10 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 
 from core.di_container import container
 
-
 db_app = SQLAlchemy()
 
 init_done = False
+
 
 
 def db_initialize():

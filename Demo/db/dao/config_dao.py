@@ -22,6 +22,9 @@ class ConfigDao(DatabaseDao[ConfigModel]):
     def save_or_update(self, model: TModel) -> TModel:
         with self._app.app_context():
             with self._db.session.begin_nested():
+                if model.id is None or model.id == 0:
+                    self._db.session.add(model)
+                    return model
                 merged = self._db.session.merge(model)
                 return merged
 
