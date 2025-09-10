@@ -1,11 +1,11 @@
 import eventlet
 eventlet.monkey_patch()
 
+from error.app_warning import AppWarning
+
 from db.dao.config_dao import ConfigDao
 from services.config_service import ConfigService
 from web.handlers.config_handler import ConfigHandler
-
-
 
 from services.controller_service import ControllerService
 
@@ -29,7 +29,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 
-from web.app import flask_app, socketio
+from web.app import flask_app, socketio, handle_global_warning
 import ssl
 
 # Register SQLAlchemy App
@@ -143,6 +143,8 @@ if __name__ == '__main__':
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(cert_path, key_path)
+
+    dispatcher.subscribe(AppWarning, handle_global_warning)
 
     db_initialize()
 

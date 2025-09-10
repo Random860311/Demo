@@ -32,8 +32,8 @@ class EventDispatcher(ABC):
         with self._lock:
             event_name = EventDispatcher.resolve_event_name(type(event))
             callbacks = list(self._subscribers.get(event_name, []))
-            if not callbacks:
-                callbacks = list(self._subscribers.get(event.key, []))
+            # if not callbacks:
+            #     callbacks = list(self._subscribers.get(event.key, []))
         return callbacks
 
     def emit(self, event: E):

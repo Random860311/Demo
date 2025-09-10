@@ -6,6 +6,17 @@ from typing import Optional
 class EStatusCode(str, Enum):
     SUCCESS = "success",
     ERROR = "error"
+    WARNING = "warning"
+
+    @classmethod
+    def from_value(cls, value: str, default: "EStatusCode" = None) -> "EStatusCode":
+        try:
+            return cls(value)
+        except ValueError:
+            print("Error: Invalid value for EStatusCode: ", value)
+            if default is not None:
+                return default
+            raise
 
 class Response:
     def __init__(self,
@@ -19,3 +30,5 @@ class Response:
         self.obj_id = obj_id
         self.obj = obj
         self.list_obj = list_obj
+
+

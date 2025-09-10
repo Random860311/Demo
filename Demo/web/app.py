@@ -5,6 +5,8 @@ from db.model.db_config import db_app
 
 import traceback
 
+from error.app_warning import AppWarning
+from web.events.global_event import EGlobalEvent
 from web.events.response import Response, EStatusCode
 
 flask_app = Flask(__name__)
@@ -27,10 +29,10 @@ def global_socketio_error_handler(e):
     print("Uncaught SocketIO exception: ", e)
     traceback.print_exc()
     return Response(status_code=EStatusCode.ERROR, message="Internal server error. Please try again later.").__dict__
-    # return {
-    #     "status": "error",
-    #     "message": "Internal server error. Please try again later."
-    # }
+
+def handle_global_warning(event: AppWarning):
+    print("Global Warning: ", event)
+    socketio.emit(EGlobalEvent.WARNING, event.to_dict())
 
 
 

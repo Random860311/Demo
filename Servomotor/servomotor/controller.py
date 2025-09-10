@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pigpio
 import threading
 
@@ -19,6 +21,14 @@ class ControllerPWM:
                  pin_enable: int,
                  duty: float = 50):
 
+        """
+        Hardware PWM-capable GPIOs on the 40-pin header (Pi 3/4/5):
+        GPIO12 (physical pin 32) — PWM0
+        GPIO18 (physical pin 12) — PWM0
+        GPIO13 (physical pin 33) — PWM1
+        GPIO19 (physical pin 35) — PWM1
+        """
+
         self.__event_dispatcher = dispatcher
         self.__pi = pi
         self.__controller_id = controller_id
@@ -27,6 +37,8 @@ class ControllerPWM:
         self.__pin_forward = pin_forward
         self.__pin_enable = pin_enable
         self.__duty = duty
+
+        self.__forward_movement: Optional[bool] = None
 
         self._freq_table = []
         self._pulses = []
@@ -58,30 +70,6 @@ class ControllerPWM:
         self.__target_freq = value
 
     @property
-    def pin_step(self) -> int:
-        """GPIO pin for STEP (12, 13, 18 or 19 recommended)"""
-        return self.__pin_step
-    @pin_step.setter
-    def pin_step(self, value: int):
-        self.__pin_step = value
-
-    @property
-    def pin_forward(self) -> int:
-        """GPIO pin for FORWARD"""
-        return self.__pin_forward
-    @pin_forward.setter
-    def pin_forward(self, value: int):
-        self.__pin_forward = value
-
-    @property
-    def pin_enable(self) -> int:
-        """GPIO pin for enable"""
-        return self.__pin_enable
-    @pin_enable.setter
-    def pin_enable(self, value: int):
-        self.__pin_enable = value
-
-    @property
     def duty(self) -> float:
         """Duty‑cycle (0‑100%, default 50)"""
         return self.__duty
@@ -102,14 +90,15 @@ class ControllerPWM:
             threading.Thread(target=self.__start_updates, daemon=True).start()
 
     def __start_updates(self):
-        # emit every 500 ms while RUNNING, but break immediately if aborted
+        # emit every 50 ms while RUNNING, but break immediately if aborted
         while self.__status == EMotorStatus.RUNNING:
             # compute current position in memory
             self.__tracker.tick()
-            self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.__status, self.__tracker.get_steps()))
+
+            self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.__status, self.__tracker.get_steps(), self.__forward_movement))
 
             # interruptible sleep (breaks instantly when stop() sets the event)
-            if self.__abort_event.wait(0.5):
+            if self.__abort_event.wait(0.05):
                 break
 
 
@@ -131,10 +120,15 @@ class ControllerPWM:
             # Account actual steps
             self.__tracker.finish_motion()
 
-            # Update controller status
-            self.status = EMotorStatus.STOPPED
+            if self.status != EMotorStatus.STOPPED:
+                # Update controller status
+                self.status = EMotorStatus.STOPPED
+                self.__forward_movement = None
+                self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.status, self.__tracker.get_steps(), self.__forward_movement))
 
-            self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.status, self.__tracker.get_steps()))
+            else:
+                print(f"Motor {self.__controller_id} already stopped do not emit any event.")
+
         except Exception as e:
             print(f"Error stopping services: {e}")
             self.status = EMotorStatus.FAULTED
@@ -148,8 +142,8 @@ class ControllerPWM:
 
         def worker():
             try:
+                self.__forward_movement = forward
                 self.__abort_event.clear()
-                self.status = EMotorStatus.RUNNING
 
                 # Enable services
                 self.__pi.write(self.__pin_enable, 0)
@@ -167,6 +161,8 @@ class ControllerPWM:
                     # Something went wrong
                     print(f"Error starting PWM: {self.__controller_id} code: {result}")
                     raise Exception(f"Error starting PWM: {self.__controller_id} code: {result}")
+
+                self.status = EMotorStatus.RUNNING
 
                 # NOT Infinite
                 if steps > 0:

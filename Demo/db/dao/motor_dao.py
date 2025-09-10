@@ -3,12 +3,32 @@ from typing import Optional
 from flask import Flask
 
 from db.dao.base_dao import BaseDao, DatabaseDao
-from db.model.motor_model import MotorModel
+from db.model.motor_model import MotorModel, MotorPinConfig
 from db.dao.pin_dao import PinDao
 from flask_sqlalchemy import SQLAlchemy
 
 from dto.motor_dto import MotorDto
 
+PINS_CONFIG = [
+    MotorPinConfig(
+        steps=PinDao.get_by_id(32),
+        dir=PinDao.get_by_id(36),
+        enable=PinDao.get_by_id(37),
+        home=PinDao.get_by_id(29)
+    ),
+    MotorPinConfig(
+        steps=PinDao.get_by_id(33),
+        dir=PinDao.get_by_id(11),
+        enable=PinDao.get_by_id(13),
+        home=PinDao.get_by_id(22)
+    ),
+    MotorPinConfig(
+        steps=PinDao.get_by_id(35),
+        dir=PinDao.get_by_id(18),
+        enable=PinDao.get_by_id(16),
+        home=PinDao.get_by_id(26)
+    ),
+]
 
 class MotorDao(DatabaseDao[MotorModel]):
     def __init__(self,app: Flask, db: SQLAlchemy, pin_dao: PinDao):
@@ -45,9 +65,16 @@ class MotorDao(DatabaseDao[MotorModel]):
             with self._db.session.begin_nested():
                 motors = MotorModel.query.all()
                 for motor in motors:
-                    motor.home = motor.position
                     motor.position = 0
                 return motors
+
+    def set_home(self, motor_id: int) -> MotorModel:
+        with self._app.app_context():
+            with self._db.session.begin_nested():
+                motor = MotorModel.query.get(motor_id)
+                motor.position = 0
+
+                return motor
 
     def set_origin_all(self) -> list[MotorModel]:
         with self._app.app_context():
@@ -57,6 +84,32 @@ class MotorDao(DatabaseDao[MotorModel]):
                     motor.origin = motor.position
                 return motors
 
+    def set_origin(self, motor_id: int) -> MotorModel:
+        with self._app.app_context():
+            with self._db.session.begin_nested():
+                motor = MotorModel.query.get(motor_id)
+                motor.origin = motor.position
+                return motor
+
+    def set_limit_all(self) -> list[MotorModel]:
+        with self._app.app_context():
+            with self._db.session.begin_nested():
+                motors = MotorModel.query.all()
+                for motor in motors:
+                    motor.limit = motor.position
+                return motors
+
+    def set_limit(self, motor_id: int) -> MotorModel:
+        with self._app.app_context():
+            with self._db.session.begin_nested():
+                motor = MotorModel.query.get(motor_id)
+                motor.limit = motor.position
+                return motor
+
+    @staticmethod
+    def get_pin_config(motor_id: int) -> MotorPinConfig:
+        return PINS_CONFIG[motor_id - 1]
+
     @staticmethod
     def to_model(dto: MotorDto, motor_model: MotorModel):
         motor_model.name = dto.name if dto.name else f"Motor {dto.id}"
@@ -65,7 +118,6 @@ class MotorDao(DatabaseDao[MotorModel]):
         motor_model.duty = dto.duty
         motor_model.distance_per_turn = dto.distance_per_turn
         motor_model.position = dto.position
-        motor_model.home = dto.home
         motor_model.origin = dto.origin
 
         return motor_model
@@ -80,43 +132,20 @@ class MotorDao(DatabaseDao[MotorModel]):
             {
                 "id": 1,
                 "name": "Motor 1",
-                "step": 32,
-                "dir": 36,
-                "enable": 37
             },
             {
                 "id": 2,
                 "name": "Motor 2",
-                "step": 33,
-                "dir": 11,
-                "enable": 13
             },
             {
                 "id": 3,
                 "name": "Motor 3",
-                "step": 12,
-                "dir": 15,
-                "enable": 16
-            },
-            {
-                "id": 4,
-                "name": "Motor 4",
-                "step": 35,
-                "dir": 18,
-                "enable": 22
             },
         ]
         for cfg in motor_configs:
-            pin_step = self.__pin_dao.get_by_id(cfg["step"])
-            pin_forward = self.__pin_dao.get_by_id(cfg["dir"])
-            pin_enable = self.__pin_dao.get_by_id(cfg["enable"])
-
             motor = MotorModel(
                 id=cfg["id"],
                 name=cfg["name"],
-                pin_step_id =pin_step.id,
-                pin_forward_id=pin_forward.id,
-                pin_enable_id=pin_enable.id,
                 target_freq=300,
                 angle=1.8,
                 duty=50,

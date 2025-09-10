@@ -43,7 +43,6 @@ class PinService(BaseService):
         self.__listening = True
         self.__socketio.start_background_task(self.__start_updates)
 
-
     def stop_listening_pins(self) -> None:
         self.__listening = False
 
