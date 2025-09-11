@@ -6,7 +6,7 @@ from error.app_warning import AppWarning
 from servomotor.controller_run_mode import EControllerRunMode
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
-from web.events.motor_event import MotorUpdatedEvent
+from web.events.motor_event import MotorUpdatedEvent, MotorCalibrationChangedEvent
 from common import utils
 from dto.motor_dto import MotorDto
 from web.events.pin_event import PinStatusEvent
@@ -25,16 +25,46 @@ class MotorService(BaseService):
         self.__controller_service = controller_service
         self.__motor_dao = motor_dao
 
-        self.__calibrating = False
+        self.__calibration_enabled = False
 
         self._subscribe_to_events()
 
-    @property
-    def calibrating(self) -> bool:
-        return self.__calibrating
-    @calibrating.setter
-    def calibrating(self, value: bool):
-        self.__calibrating = value
+    def is_calibration_enabled(self)-> bool:
+        """
+        Determines if the calibration mode is enabled.
+
+        Checks the state of the calibration mode and returns whether it is
+        enabled or not.
+
+        :return: True if calibration mode is enabled, False otherwise.
+        :rtype: bool
+        """
+        return self.__calibration_enabled
+
+    def set_calibration(self, value: bool) -> bool:
+        """
+        Sets the calibration state for the system. This method determines if calibration
+        is to be enabled or disabled. It ensures that calibration cannot be toggled while
+        any motor controllers are actively running. Returns whether the calibration state
+        was changed successfully.
+
+        :param value: The desired calibration state. `True` to enable calibration,
+            `False` to disable.
+        :return: `True` if the calibration state was changed, `False` if the requested
+            state matches the current state.
+
+        :raises ValueError: If calibration is attempted while any motor controllers
+            are still running.
+        """
+        if self.__calibration_enabled == value:
+            return False
+        if self.__controller_service.is_any_controller_running():
+            raise ValueError("Cannot set calibration while some motors are still running.")
+
+        self.__calibration_enabled = value
+
+        self._dispatcher.emit_async(MotorCalibrationChangedEvent(value))
+        return True
 
     def get_all(self) -> list[MotorDto]:
         motor_models = self.__motor_dao.get_all()
@@ -167,11 +197,11 @@ class MotorService(BaseService):
         print(f"__asert_motor_operation: {motor.id} forward: {forward} steps: {steps} position: {position} end_position: {end_position} limit: {motor.limit}")
 
         # Check that motor has valid origin
-        if not self.calibrating and not motor.origin:
+        if not self.__calibration_enabled and not motor.origin:
             raise AppWarning(f"Motor {motor.id} does not have origin set.")
 
         # Check that motor has valid limit
-        if not self.calibrating and not motor.limit:
+        if not self.__calibration_enabled and not motor.limit:
             raise AppWarning(f"Motor {motor.id} does not have limit set.")
 
         # Check if clockwise motor is at home
@@ -183,11 +213,11 @@ class MotorService(BaseService):
             raise AppWarning(f"Motor {motor.id} is at home and can't continue running in clockwise direction.")
 
         # Check if clockwise motor is at limit
-        if motor.clockwise and forward and end_position >= motor.limit:
+        if (not self.__calibration_enabled) and motor.clockwise and forward and end_position >= motor.limit:
             raise AppWarning(f"Motor {motor.id} is at limit  and can't continue running in clockwise direction.")
 
         # Check if counter-clockwise motor is at limit
-        if not motor.clockwise and not forward and end_position <= motor.limit:
+        if (not self.__calibration_enabled) and (not motor.clockwise) and (not forward) and end_position <= motor.limit:
             raise AppWarning(f"Motor {motor.id} is at limit and can't continue running in counter-clockwise direction.")
 
     def run_motor(self, motor_id: int, run_mode: EControllerRunMode = EControllerRunMode.SINGLE_STEP, distance: Optional[float] = None, forward: bool = True):
@@ -277,7 +307,6 @@ class MotorService(BaseService):
             origin=motor_model.origin,
             limit=motor_model.limit,
 
-            calibrating=self.calibrating,
             status=self.get_motor_status(motor_model.id),
         )
 

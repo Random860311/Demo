@@ -28,8 +28,6 @@ class MotorDto(Serializable):
 
     distance_per_turn: float = 0
 
-    calibrating: bool = False
-
     # This motor should rotate clockwise from position 0
     clockwise: bool = True
     # Movement direction
@@ -79,7 +77,6 @@ class MotorDto(Serializable):
             # "home": self.home,
             "limit": self.limit,
 
-            "calibrating": self.calibrating,
             "clockwise": self.clockwise,
             "direction": self.direction,
         }

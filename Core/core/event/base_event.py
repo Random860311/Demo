@@ -3,7 +3,7 @@ from typing import TypeVar, Generic, Optional
 
 EventData = TypeVar("EventData")
 
-class BaseEvent(Generic[EventData], ABC):
+class BaseEvent(Generic[EventData]):
     def __init__(self, key: str, data: Optional[EventData] = None):
         self.key = key
         self.data = data
