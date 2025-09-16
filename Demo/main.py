@@ -27,6 +27,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 from web.app import flask_app, socketio, handle_global_warning
 import ssl
+from pathlib import Path
 
 
 # Register SQLAlchemy App
@@ -135,14 +136,14 @@ container.register_factory(
 #                                             **{**kwargs, "events_dispatcher": dispatcher})
 
 if __name__ == '__main__':
-    cert_path = "web/certs/cert.pem"
-    key_path = "web/certs/key.pem"
+    cert_path = Path("web/certs/cert.pem")
+    key_path = Path("web/certs/key.pem")
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(cert_path, key_path)
 
+    # Subscribe global handlers, init DB, resolve and register handlers
     dispatcher.subscribe(AppWarning, handle_global_warning)
-
     db_initialize()
 
     pin_handler = container.resolve_singleton(PinHandler)
@@ -155,19 +156,59 @@ if __name__ == '__main__':
     motor_handler.register_handlers()
     config_handler.register_handlers()
 
-    socketio.run(
-        flask_app,
+    # ---- SSL setup (HTTPS/WSS) ----
+    has_tls = cert_path.exists() and key_path.exists()
+    if has_tls:
+        print(f"[TLS] Using cert: {cert_path} and key: {key_path}")
+    else:
+        if not cert_path.exists():
+            print(f"[TLS] Missing certificate file: {cert_path}")
+        if not key_path.exists():
+            print(f"[TLS] Missing private key file: {key_path}")
+        print("[TLS] TLS disabled (falling back to HTTP).")
+
+    # Detect the async mode chosen by Flask-SocketIO (eventlet, gevent, threading, etc.)
+    async_mode = getattr(socketio, "async_mode", None)
+    print(f"[SocketIO] async_mode={async_mode}")
+
+    run_kwargs = dict(
         host="0.0.0.0",
         port=8443,
-        # certfile=cert_path,
-        # keyfile=key_path,
-        # ssl_context=(cert_path, key_path),
-        debug=True
+        debug=True,
+        # use_reloader=False,  # optional: disable duplicate startup logs
     )
 
-    # app.app.run(
+    try:
+        if has_tls:
+            if async_mode in ("eventlet", "gevent"):
+                # Eventlet/Gevent expect certfile/keyfile (NOT ssl_context)
+                socketio.run(
+                    flask_app,
+                    certfile=str(cert_path),
+                    keyfile=str(key_path),
+                    **run_kwargs,
+                )
+            else:
+                # Werkzeug/threading: ssl_context is supported
+                ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                ssl_ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
+                socketio.run(
+                    flask_app,
+                    ssl_context=ssl_ctx,
+                    **run_kwargs,
+                )
+        else:
+            # No TLS → plain HTTP
+            socketio.run(flask_app, **run_kwargs)
+
+    except Exception as e:
+        print(f"[TLS] Failed to start with TLS: {e}. Falling back to HTTP.")
+        socketio.run(flask_app, **run_kwargs)
+
+
+    # socketio.run(
+    #     flask_app,
     #     host="0.0.0.0",
-    #     port=8443, #8000
-    #     ssl_context=(cert_path, key_path),
+    #     port=8443,
     #     debug=True
     # )
