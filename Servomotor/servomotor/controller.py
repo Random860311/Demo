@@ -46,9 +46,6 @@ class ControllerPWM:
         self.__status = EMotorStatus.STOPPED
         self.__abort_event = threading.Event()
 
-        self.__pi.set_mode(self.__pin_step, pigpio.OUTPUT)
-        self.__pi.set_mode(self.__pin_forward, pigpio.OUTPUT)
-        self.__pi.set_mode(self.__pin_enable, pigpio.OUTPUT)
         self.__pi.write(self.__pin_enable, 0)   # ensure initially the service is stopped
 
         print(f"Initializing tracker for controller {controller_id} with position {current_position}")
@@ -98,7 +95,7 @@ class ControllerPWM:
             self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.__status, self.__tracker.get_steps(), self.__forward_movement))
 
             # interruptible sleep (breaks instantly when stop() sets the event)
-            if self.__abort_event.wait(0.05):
+            if self.__abort_event.wait(0.01):
                 break
 
 
@@ -108,7 +105,7 @@ class ControllerPWM:
     def get_position_steps(self) -> int:
         return self.__tracker.get_steps()
 
-    def stop(self):
+    def stop(self) -> bool:
         try:
             # Interrupt the wait if any (case infinite)
             self.__abort_event.set()
@@ -125,15 +122,14 @@ class ControllerPWM:
                 self.status = EMotorStatus.STOPPED
                 self.__forward_movement = None
                 self.__event_dispatcher.emit_async(MotorStatusData(self.__controller_id, self.status, self.__tracker.get_steps(), self.__forward_movement))
-
+                return True
             else:
                 print(f"Motor {self.__controller_id} already stopped do not emit any event.")
-
         except Exception as e:
             print(f"Error stopping services: {e}")
             self.status = EMotorStatus.FAULTED
             raise e
-
+        return False
 
     def run(self, forward: bool = True, steps: int = 1):
         if self.status == EMotorStatus.RUNNING:

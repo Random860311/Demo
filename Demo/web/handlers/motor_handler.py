@@ -1,24 +1,19 @@
-import traceback
 from typing import Any
 
 from flask_socketio import SocketIO
 
 from common import utils
-from core.event.base_event import BaseEvent
 from core.event.event_dispatcher import EventDispatcher
 from dto.motor_dto import MotorDto
+from services.motor.motor_protocol import MotorServiceProtocol
 
-
-from services.motor_service import MotorService
 from servomotor.controller_run_mode import EControllerRunMode
-from web.events.global_event import EGlobalEvent
 from web.events.motor_event import EMotorEventType, MotorUpdatedEvent, MotorCalibrationChangedEvent
-from web.events.response import Response, EStatusCode
 from web.handlers.base_handler import BaseHandler
 
 
 class MotorHandler(BaseHandler):
-    def __init__(self, dispatcher: EventDispatcher, socketio: SocketIO, motor_services: MotorService):
+    def __init__(self, dispatcher: EventDispatcher, socketio: SocketIO, motor_services: MotorServiceProtocol):
         super().__init__(dispatcher, socketio)
 
         self.__motor_service = motor_services
@@ -29,16 +24,12 @@ class MotorHandler(BaseHandler):
         self._socketio.on_event(message=EMotorEventType.STOP, handler=self._handle_stop_motor)
         self._socketio.on_event(message=EMotorEventType.START, handler=self._handle_start_motor)
 
-        self._socketio.on_event(message=EMotorEventType.SET_HOME_ALL, handler=self._handle_set_home_all)
-        self._socketio.on_event(message=EMotorEventType.SET_HOME, handler=self._handle_set_home)
         self._socketio.on_event(message=EMotorEventType.SET_ORIGIN_ALL, handler=self._handle_set_origin_all)
         self._socketio.on_event(message=EMotorEventType.SET_ORIGIN, handler=self._handle_set_origin)
         self._socketio.on_event(message=EMotorEventType.SET_LIMIT_ALL, handler=self._handle_set_limit_all)
         self._socketio.on_event(message=EMotorEventType.SET_LIMIT, handler=self._handle_set_limit)
 
-        self._socketio.on_event(message=EMotorEventType.MOVE_TO_HOME_ALL, handler=self._handle_move_to_home_all)
         self._socketio.on_event(message=EMotorEventType.MOVE_TO_HOME, handler=self._handle_move_to_home)
-        self._socketio.on_event(message=EMotorEventType.MOVE_TO_ORIGIN_ALL, handler=self._handle_move_to_origin_all)
         self._socketio.on_event(message=EMotorEventType.MOVE_TO_ORIGIN, handler=self._handle_move_to_origin)
 
         self._socketio.on_event(message=EMotorEventType.SET_CALIBRATION, handler=self._handle_set_calibration)
@@ -63,20 +54,10 @@ class MotorHandler(BaseHandler):
         self.__motor_service.move_to_origin(motor_id)
         return self.ok()
 
-    @BaseHandler.safe(error_message="Error moving motors to origin.")
-    def _handle_move_to_origin_all(self, data):
-        self.__motor_service.move_to_origin_all()
-        return self.ok()
-
     @BaseHandler.safe(error_message="Error moving motors to home.")
     def _handle_move_to_home(self, data):
         motor_id = utils.get_int(data, "motorId")
         self.__motor_service.move_to_home(motor_id)
-        return self.ok()
-
-    @BaseHandler.safe(error_message="Error moving motors to home.")
-    def _handle_move_to_home_all(self, data):
-        self.__motor_service.move_to_home_all()
         return self.ok()
 
     @BaseHandler.safe(error_message="Error setting motors origin")
@@ -90,17 +71,6 @@ class MotorHandler(BaseHandler):
         self.__motor_service.set_origin(motor_id)
         return self.ok()
 
-    @BaseHandler.safe(error_message="Error setting all motors home.")
-    def _handle_set_home_all(self, data):
-        self.__motor_service.set_home_all()
-        return self.ok()
-
-    @BaseHandler.safe(error_message="Error setting motor home.")
-    def _handle_set_home(self, data):
-        motor_id = utils.get_int(data, "motorId")
-        self.__motor_service.set_home(motor_id)
-        return self.ok()
-
     @BaseHandler.safe(error_message="Error setting all motors limits.")
     def _handle_set_limit_all(self, data):
         self.__motor_service.set_limit_all()
@@ -111,7 +81,6 @@ class MotorHandler(BaseHandler):
         motor_id = utils.get_int(data, "motorId")
         self.__motor_service.set_limit(motor_id)
         return self.ok()
-
 
     @BaseHandler.safe(error_message="Error updating motor.")
     def _handle_get_all(self, data) -> dict[str, Any]:
@@ -139,7 +108,19 @@ class MotorHandler(BaseHandler):
         motor_id = utils.get_int(data, "motorId")
         direction = utils.get_bool(data, "direction", True)
         run_mode = EControllerRunMode.from_value(data.get("runMode", 0))
-        self.__motor_service.run_motor(motor_id=motor_id, run_mode=run_mode, distance=data.get("distance"), forward=direction)
+
+        motor = self.__motor_service.get_motor(motor_id)
+
+        steps = 1
+        match run_mode:
+            case EControllerRunMode.INFINITE:
+                steps = 0
+            case EControllerRunMode.CONFIG:
+                steps = utils.calculate_motor_total_steps(motor_angle=motor.angle, distance=data.get("distance"), distance_per_turn=motor.distance_per_turn)
+            case _:
+                steps = 1
+
+        self.__motor_service.move_steps(motor_id=motor_id, steps=steps, forward=direction)
 
         return self.ok(obj_id=motor_id)
 

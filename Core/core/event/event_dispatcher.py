@@ -22,11 +22,13 @@ class EventDispatcher(ABC):
         with self._lock:
             self._subscribers.setdefault(event_name, []).append(callback)
 
-    def unsubscribe(self, event: str, callback: Callable[[E], None]):
+    def unsubscribe(self, event: Union[Type[E] | str], callback: Callable[[E], None]):
         event_name = EventDispatcher.resolve_event_name(event)
         with self._lock:
             if event_name in self._subscribers and callback in self._subscribers[event_name]:
                 self._subscribers[event_name].remove(callback)
+            # else:
+            #     print(f"[dispatcher.unsubscribe] no such subscriber: {callback} for event: {event_name}")
 
     def _collect_callbacks(self, event: E):
         with self._lock:

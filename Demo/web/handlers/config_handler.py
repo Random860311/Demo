@@ -2,13 +2,13 @@ from flask_socketio import SocketIO
 
 from core.event.event_dispatcher import EventDispatcher
 from dto.config_dto import ConfigDto
-from services.config_service import ConfigService
+from services.config.config_protocol import ConfigProtocol
 from web.events.config_event import EConfigEventType, ConfigEvent
 from web.events.response import EStatusCode, Response
 from web.handlers.base_handler import BaseHandler
 
 class ConfigHandler(BaseHandler):
-    def __init__(self, dispatcher: EventDispatcher, socketio: SocketIO, config_services: ConfigService):
+    def __init__(self, dispatcher: EventDispatcher, socketio: SocketIO, config_services: ConfigProtocol):
         super().__init__(dispatcher, socketio)
         self.__config_service = config_services
 

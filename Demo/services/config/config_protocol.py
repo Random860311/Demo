@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from dto.config_dto import ConfigDto
+
+
+class ConfigProtocol(Protocol):
+    def get_by_id(self, obj_id: int) -> ConfigDto: ...
+
+    def get_all(self) -> list[ConfigDto]: ...
+
+    def save_or_update(self, dto: ConfigDto) -> ConfigDto: ...
+
+    def delete(self, obj_id: int) -> ConfigDto: ...

@@ -36,6 +36,7 @@ class MotorModel(DeviceModel):
 
 @dataclass
 class MotorPinConfig:
+    motor_id: int
     steps: PinModel
     dir: PinModel
     enable: PinModel

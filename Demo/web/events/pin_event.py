@@ -1,6 +1,6 @@
 from enum import Enum
-from dataclasses import dataclass
 from core.event.base_event import BaseEvent
+from event.pin_status_change_event import PinStatusChangeEvent
 
 
 class EPinEventType(str, Enum):
@@ -9,11 +9,7 @@ class EPinEventType(str, Enum):
 
     STATUS_CHANGED = "pin:status_changed"
 
-@dataclass
-class PinStatusData:
-    pin_id: int
-    status: bool
 
-class PinStatusEvent(BaseEvent[list[PinStatusData]]):
-    def __init__(self, data: list[PinStatusData]):
+class PinEvent(BaseEvent[PinStatusChangeEvent]):
+    def __init__(self, data: PinStatusChangeEvent):
         super().__init__(key=EPinEventType.STATUS_CHANGED, data=data)

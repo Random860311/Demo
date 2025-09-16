@@ -11,22 +11,25 @@ from dto.motor_dto import MotorDto
 
 PINS_CONFIG = [
     MotorPinConfig(
+        motor_id=1,
         steps=PinDao.get_by_id(32),
         dir=PinDao.get_by_id(36),
         enable=PinDao.get_by_id(37),
-        home=PinDao.get_by_id(29)
+        home=PinDao.get_by_id(16)
     ),
     MotorPinConfig(
+        motor_id=2,
         steps=PinDao.get_by_id(33),
         dir=PinDao.get_by_id(11),
         enable=PinDao.get_by_id(13),
         home=PinDao.get_by_id(22)
     ),
     MotorPinConfig(
+        motor_id=3,
         steps=PinDao.get_by_id(35),
         dir=PinDao.get_by_id(18),
-        enable=PinDao.get_by_id(16),
-        home=PinDao.get_by_id(26)
+        enable=PinDao.get_by_id(26),
+        home=PinDao.get_by_id(29)
     ),
 ]
 
@@ -109,6 +112,10 @@ class MotorDao(DatabaseDao[MotorModel]):
     @staticmethod
     def get_pin_config(motor_id: int) -> MotorPinConfig:
         return PINS_CONFIG[motor_id - 1]
+
+    @staticmethod
+    def get_all_pin_configs() -> list[MotorPinConfig]:
+        return PINS_CONFIG
 
     @staticmethod
     def to_model(dto: MotorDto, motor_model: MotorModel):

@@ -11,18 +11,13 @@ class EMotorEventType(str, Enum):
     STOP = "motor:stop"                         # Request to stop motor
     START = "motor:start"                       # Request to start motor
 
-    SET_HOME_ALL = "motor:set_home_all"         # Request to set all motors home
-    SET_HOME = "motor:set_home"                 # Request to set motors home
-
     SET_ORIGIN_ALL = "motor:set_origin_all"     # Request to set all motors origins
     SET_ORIGIN = "motor:set_origin"             # Request to set motors origins
 
     SET_LIMIT_ALL = "motor:set_limit_all"       # Request to set all motors limits
     SET_LIMIT = "motor:set_limit"               # Request to set motors limits
 
-    MOVE_TO_HOME_ALL = "motor:move_to_home_all"
     MOVE_TO_HOME = "motor:move_to_home"
-    MOVE_TO_ORIGIN_ALL = "motor:move_to_origin_all"
     MOVE_TO_ORIGIN = "motor:move_to_origin"
 
     SET_CALIBRATION = "motor:set_calibration"
