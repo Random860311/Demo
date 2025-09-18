@@ -35,6 +35,8 @@ class MotorHandler(BaseHandler):
         self._socketio.on_event(message=EMotorEventType.SET_CALIBRATION, handler=self._handle_set_calibration)
         self._socketio.on_event(message=EMotorEventType.GET_CALIBRATION, handler=self._handle_get_calibration)
 
+        self._socketio.on_event(message=EMotorEventType.START_GCODE, handler=self._handle_gcode_command)
+
         self._dispatcher.subscribe(MotorUpdatedEvent, self._emit_event)
         self._dispatcher.subscribe(MotorCalibrationChangedEvent, self._emit_event)
 
@@ -123,4 +125,14 @@ class MotorHandler(BaseHandler):
         self.__motor_service.move_steps(motor_id=motor_id, steps=steps, forward=direction)
 
         return self.ok(obj_id=motor_id)
+
+    @BaseHandler.safe(error_message="Error running gcode command.")
+    def _handle_gcode_command(self, data) -> dict[str, Any]:
+        command = data.get("command")
+        if not command or len(command) == 0:
+            return self.fail("Command is required.")
+
+        self.__motor_service.run_gcode(command)
+
+        return self.ok()
 

@@ -28,6 +28,8 @@ class EMotorEventType(str, Enum):
     STATUS_CHANGED = "motor:status_changed"     # Broadcast motor status changed
     POSITION_CHANGED = "motor:position_changed" # Broadcast motor position changed
 
+    START_GCODE = "motor:start_gcode"
+
 
 class MotorUpdatedEvent(BaseEvent[MotorDto]):
     def __init__(self, data: MotorDto):

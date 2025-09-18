@@ -1,3 +1,4 @@
+gcodeparser
 flask-sqlalchemy
 #-e ../Servomotor
 Flask~=3.1.1

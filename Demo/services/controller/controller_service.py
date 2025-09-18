@@ -32,9 +32,18 @@ class ControllerService(BaseService, ControllerProtocol):
         controller = self.__get_controller(controller_id)
         controller.run(forward=forward, steps=steps)
 
+    def start_controller_async(self, controller_id: int, steps: int, forward: bool = True):
+        return self._socketio.start_background_task(self.start_controller, controller_id, steps, forward)
+
     def stop_controller(self, controller_id: int) -> bool:
         controller = self.__get_controller(controller_id)
         return controller.stop()
+
+    def stop_all_controllers(self) -> None:
+        with self._lock:
+            controllers = list(self._controller_pool.values())
+        for controller in controllers:
+            controller.stop()
 
     def is_any_controller_running(self) -> bool:
         with self._lock:

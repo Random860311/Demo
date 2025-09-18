@@ -1,7 +1,7 @@
 from typing import Protocol, Optional
 
 from dto.motor_dto import MotorDto
-from services.motor.tasks.run_task_protocol import RunTaskProtocol
+from services.motor.tasks.run_task_protocol import SingleMotorTaskProtocol
 from servomotor.controller_status import EMotorStatus
 
 
@@ -32,7 +32,9 @@ class MotorServiceProtocol(Protocol):
 
     def move_steps(self, motor_id: int, steps: int = 1, forward: bool = True): ...
 
-    def run(self, task: RunTaskProtocol):...
+    def run_gcode(self, gcode: str):...
 
-    def stop_motor(self, motor_id: int) -> bool:...
+    def run(self, task: SingleMotorTaskProtocol):...
+
+    def stop_motor(self, motor_id: Optional[int] = None) -> bool:...
 
