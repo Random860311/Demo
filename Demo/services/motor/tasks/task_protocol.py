@@ -10,6 +10,7 @@ class ExecKwargs(TypedDict, total=False):
     steps: int
     direction: bool
     current_position: int
+    freq_hz: int
 
 @runtime_checkable
 class MotorTaskProtocol(Protocol):

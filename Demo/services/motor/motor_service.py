@@ -2,22 +2,21 @@ import traceback
 from typing import Optional
 
 from flask_socketio import SocketIO
-from gcodeparser import GcodeParser
 
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
-from db.model.motor_model import MotorModel
+from db.model.motor.motor_model import MotorModel
 from error.app_warning import AppWarning
-from event.motor_task_event import TaskHomeFinishedEvent, TaskStepFinishedEvent, TaskOriginFinishedEvent, TaskEvent, SingleMotorTaskEvent, TaskGcodeFinishedEvent
+from event.motor_task_event import TaskHomeFinishedEvent, TaskStepFinishedEvent, TaskOriginFinishedEvent, SingleMotorTaskEvent, TaskGcodeFinishedEvent
 from event.pin_status_change_event import PinStatusChangeEvent
 
 from services.controller.controller_protocol import ControllerProtocol
 from services.motor.motor_protocol import MotorServiceProtocol
-from services.motor.tasks.gcode_task import GcodeTask
-from services.motor.tasks.move_origin_task import MoveOriginTask
-from services.motor.tasks.run_task_protocol import SingleMotorTaskProtocol, MotorTaskProtocol
-from services.motor.tasks.find_home_task import FindHomeTask
-from services.motor.tasks.move_steps_task import MoveStepsTask
+from services.motor.tasks.gcode.gcode_task import GcodeTask
+from services.motor.tasks.origin.origin_task import MoveOriginTask
+from services.motor.tasks.task_protocol import SingleMotorTaskProtocol, MotorTaskProtocol
+from services.motor.tasks.home.home_task import FindHomeTask
+from services.motor.tasks.steps.steps_task import MoveStepsTask
 from services.pigpio.pigpio_protocol import PigpioProtocol
 from services.pin.pin_protocol import pin_model_to_dto
 
@@ -155,7 +154,7 @@ class MotorService(BaseService, MotorServiceProtocol):
 
     def move_steps(self, motor_id: int, steps: int = 1, forward: bool = True):
         motor_model = self.__motor_dao.get_by_id(motor_id)
-
+        print(f"Move steps: {steps} forward: {forward}")
         self.run(MoveStepsTask(controller_service=self.__controller_service,
                                motor=motor_model,
                                dispatcher=self._dispatcher,

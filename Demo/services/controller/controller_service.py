@@ -28,12 +28,9 @@ class ControllerService(BaseService, ControllerProtocol):
     def _subscribe_to_events(self):
         pass
 
-    def start_controller(self, controller_id: int, steps: int, forward: bool = True):
+    def start_controller(self, controller_id: int, steps: int, freq_hz: int, forward: bool = True):
         controller = self.__get_controller(controller_id)
-        controller.run(forward=forward, steps=steps)
-
-    def start_controller_async(self, controller_id: int, steps: int, forward: bool = True):
-        return self._socketio.start_background_task(self.start_controller, controller_id, steps, forward)
+        controller.run(freq_hz=freq_hz, forward=forward, steps=steps)
 
     def stop_controller(self, controller_id: int) -> bool:
         controller = self.__get_controller(controller_id)
@@ -96,7 +93,6 @@ class ControllerService(BaseService, ControllerProtocol):
                     pin_enable= config.enable.pigpio_pin_number,
                     pin_forward= config.dir.pigpio_pin_number,
                     pin_step= config.steps.pigpio_pin_number,
-                    target_freq=int(motor_model.target_freq),
                     duty=motor_model.duty,
                 )
                 self._controller_pool[motor_id] = controller

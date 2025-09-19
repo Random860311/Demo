@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import uuid
 from typing import Optional
 
-from db.model.motor_model import MotorModel
+from db.model.motor.motor_model import MotorModel
 
 
 @dataclass

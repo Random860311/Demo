@@ -1,7 +1,7 @@
 from typing import Protocol, Optional
 
 from dto.motor_dto import MotorDto
-from services.motor.tasks.run_task_protocol import SingleMotorTaskProtocol
+from services.motor.tasks.task_protocol import SingleMotorTaskProtocol
 from servomotor.controller_status import EMotorStatus
 
 

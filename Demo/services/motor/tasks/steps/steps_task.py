@@ -1,13 +1,11 @@
 from typing import Any, Unpack, Optional
 
-from flask_socketio import SocketIO
-
 from core.event.event_dispatcher import EventDispatcher
-from db.model.motor_model import MotorModel
+from db.model.motor.motor_model import MotorModel
 from event.motor_task_event import TaskStepFinishedEvent
 from services.controller.controller_protocol import ControllerProtocol
-from services.motor.tasks.base_run_task import BaseSingleMotorTask
-from services.motor.tasks.run_task_protocol import ExecKwargs
+from services.motor.tasks.base_task import BaseSingleMotorTask
+from services.motor.tasks.task_protocol import ExecKwargs
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
 
@@ -44,7 +42,9 @@ class MoveStepsTask(BaseSingleMotorTask):
 
         super().execute(**kwargs)
 
-        self._controller_service.start_controller(self.motor.id, steps=self.__steps, forward=self.__direction)
+        print(kwargs)
+        print(f"Steps task id: {self.motor.id} steps: {self.__steps} direction: {self.__direction} freq: {self.freq_hz}")
+        self._controller_service.start_controller(controller_id=self.motor.id, steps=self.__steps, freq_hz=self.freq_hz, forward=self.__direction)
 
     def stop(self):
         super().stop()

@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 import uuid
-from typing import Optional, Any, Unpack
+from typing import Optional, Unpack
 
 from core.event.event_dispatcher import EventDispatcher
-from db.model.motor_model import MotorModel
+from db.model.motor.motor_model import MotorModel
 from error.app_warning import AppWarning
 from event.pin_status_change_event import PinStatusChangeEvent
 from services.controller.controller_protocol import ControllerProtocol
-from services.motor.tasks.run_task_protocol import SingleMotorTaskProtocol, ExecKwargs, MotorTaskProtocol
+from services.motor.tasks.task_protocol import SingleMotorTaskProtocol, ExecKwargs, MotorTaskProtocol
 from servomotor.event.controller_event import MotorStatusData
 
 class BaseMotorTask(MotorTaskProtocol, ABC):
@@ -16,7 +16,7 @@ class BaseMotorTask(MotorTaskProtocol, ABC):
         self._dispatcher = dispatcher
 
         self._uuid = uuid.uuid4()
-
+        self._execute_kwargs: Unpack[ExecKwargs] = {}
         self._is_finished: Optional[bool] = None
 
     @property
@@ -33,6 +33,10 @@ class BaseMotorTask(MotorTaskProtocol, ABC):
         """
         return self._is_finished
 
+    def execute(self, **kwargs: Unpack[ExecKwargs]) -> None:
+        self._is_finished = False
+        self._execute_kwargs = kwargs
+
     def stop(self):
         self._is_finished = True
 
@@ -45,12 +49,17 @@ class BaseMotorTask(MotorTaskProtocol, ABC):
 class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
     def __init__(self, controller_service: ControllerProtocol, dispatcher: EventDispatcher):
         super().__init__(controller_service, dispatcher)
+
         self._pass_limits = False
 
     @property
     @abstractmethod
     def motor(self) -> MotorModel:
         pass
+
+    @property
+    def freq_hz(self) -> int:
+        return self._execute_kwargs.get("freq_hz", self.motor.target_freq)
 
     @property
     def controller_id(self):
@@ -72,7 +81,7 @@ class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
         current_position = kwargs.get("current_position", self.motor.position)
 
         self._validate_operation(current_position=current_position)
-        self._is_finished = False
+        super().execute(**kwargs)
 
     def _validate_operation(self, current_position: Optional[int] = None, check_final_position: bool = True):
         try:

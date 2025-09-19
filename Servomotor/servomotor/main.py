@@ -5,20 +5,20 @@ def main():
     params = read_params()
     pi = pigpio.pi()
 
-    driver = controller.ControllerPWM(
-        pi=pi,
-        target_freq=params['target_freq'],
-        total_steps=params['total_steps'] or 200,
-        pin_step=params['gpio_pin'],
-        pin_forward=params['gpio_pin_forward'],
-
-        duty=params['duty_cycle'],
-        start_freq=params.get('start_freq') or 0,
-        accel_steps=params['accel_steps'],
-        decel_steps=params['decel_steps'],
-        pin_enable=1
-    )
-    driver.run()
+    # driver = controller.ControllerPWM(
+    #     pi=pi,
+    #     target_freq=params['target_freq'],
+    #     total_steps=params['total_steps'] or 200,
+    #     pin_step=params['gpio_pin'],
+    #     pin_forward=params['gpio_pin_forward'],
+    #
+    #     duty=params['duty_cycle'],
+    #     start_freq=params.get('start_freq') or 0,
+    #     accel_steps=params['accel_steps'],
+    #     decel_steps=params['decel_steps'],
+    #     pin_enable=1
+    # )
+    # driver.run()
     print("Done!")
 
 def read_params():

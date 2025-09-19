@@ -2,8 +2,9 @@ from typing import Optional
 
 from flask import Flask
 
-from db.dao.base_dao import BaseDao, DatabaseDao
-from db.model.motor_model import MotorModel, MotorPinConfig
+from db.dao.base_dao import DatabaseDao
+from db.model.motor.motor_model import MotorModel
+from db.model.motor.motor_pin_config import MotorPinConfig
 from db.dao.pin_dao import PinDao
 from flask_sqlalchemy import SQLAlchemy
 
@@ -12,24 +13,24 @@ from dto.motor_dto import MotorDto
 PINS_CONFIG = [
     MotorPinConfig(
         motor_id=1,
-        steps=PinDao.get_by_id(32),
-        dir=PinDao.get_by_id(36),
-        enable=PinDao.get_by_id(37),
-        home=PinDao.get_by_id(16)
+        steps=PinDao.get_by_id(32),     # 12
+        dir=PinDao.get_by_id(36),       # 16
+        enable=PinDao.get_by_id(37),    # 26 
+        home=PinDao.get_by_id(16)       # 23
     ),
     MotorPinConfig(
         motor_id=2,
-        steps=PinDao.get_by_id(33),
-        dir=PinDao.get_by_id(11),
-        enable=PinDao.get_by_id(13),
-        home=PinDao.get_by_id(22)
+        steps=PinDao.get_by_id(33),     # 13
+        dir=PinDao.get_by_id(11),       # 17
+        enable=PinDao.get_by_id(13),    # 27
+        home=PinDao.get_by_id(22)       # 25
     ),
     MotorPinConfig(
         motor_id=3,
-        steps=PinDao.get_by_id(35),
-        dir=PinDao.get_by_id(18),
-        enable=PinDao.get_by_id(26),
-        home=PinDao.get_by_id(29)
+        steps=PinDao.get_by_id(35),     # 19
+        dir=PinDao.get_by_id(18),       # 24
+        enable=PinDao.get_by_id(31),    # 6
+        home=PinDao.get_by_id(29)       # 5
     ),
 ]
 

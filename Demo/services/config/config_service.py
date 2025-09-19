@@ -2,7 +2,7 @@ from flask_socketio import SocketIO
 
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.config_dao import ConfigDao
-from db.model.config_model import ConfigModel
+from db.model.config.config_model import ConfigModel
 from dto.config_dto import ConfigDto
 from services.base_service import BaseService
 from services.config.config_protocol import ConfigProtocol

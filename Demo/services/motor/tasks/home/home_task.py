@@ -1,15 +1,15 @@
 import threading
-from typing import Any, Unpack, Optional
+from typing import Unpack, Optional
 
 from flask_socketio import SocketIO
 
 from core.event.event_dispatcher import EventDispatcher
-from db.model.motor_model import MotorModel
+from db.model.motor.motor_model import MotorModel
 from event.motor_task_event import TaskHomeFinishedEvent
 from event.pin_status_change_event import PinStatusChangeEvent
 from services.controller.controller_protocol import ControllerProtocol
-from services.motor.tasks.base_run_task import BaseSingleMotorTask
-from services.motor.tasks.run_task_protocol import ExecKwargs
+from services.motor.tasks.base_task import BaseSingleMotorTask
+from services.motor.tasks.task_protocol import ExecKwargs
 from services.pigpio.pigpio_protocol import PigpioProtocol
 
 
@@ -50,7 +50,7 @@ class FindHomeTask(BaseSingleMotorTask):
         self.__direction = not self.__direction
 
         while not self.__abort_event.is_set():
-            self._controller_service.start_controller(self.motor.id, 1, forward=self.__direction)
+            self._controller_service.start_controller(controller_id=self.motor.id, steps=1, freq_hz=self.freq_hz, forward=self.__direction)
             self.__abort_event.wait(0.1)
 
     def handle_pin_status_change(self, event: PinStatusChangeEvent):
@@ -71,7 +71,7 @@ class FindHomeTask(BaseSingleMotorTask):
         if at_home:
             self._start_adjustment()
         else:
-            self._controller_service.start_controller(self.motor.id, 0, forward=self.__direction)
+            self._controller_service.start_controller(controller_id=self.motor.id, steps=0, freq_hz=self.freq_hz, forward=self.__direction)
 
     def stop(self):
         self.__abort_event.set()

@@ -1,6 +1,4 @@
-import threading
 import traceback
-from enum import Enum
 from typing import Unpack, Optional
 
 from flask_socketio import SocketIO
@@ -9,34 +7,20 @@ from gcodeparser import GcodeParser, GcodeLine
 from common import utils
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
-from db.model.motor_model import MotorModel
-from event.motor_task_event import TaskGcodeFinishedEvent, TaskOriginFinishedEvent, SingleMotorTaskEvent, TaskStepFinishedEvent
+from db.model.motor.motor_label import EMotorLabel
+from db.model.motor.motor_model import MotorModel
+from event.motor_task_event import TaskGcodeFinishedEvent
 from event.pin_status_change_event import PinStatusChangeEvent
 from services.controller.controller_protocol import ControllerProtocol
-from services.motor.tasks.base_run_task import BaseMotorTask
-from services.motor.tasks.move_origin_task import MoveOriginTask
-from services.motor.tasks.move_steps_task import MoveStepsTask
-from services.motor.tasks.run_task_protocol import ExecKwargs, SingleMotorTaskProtocol
+from services.motor.tasks.base_task import BaseMotorTask
+from services.motor.tasks.gcode.gcode_command import EGcodeCommand
+from services.motor.tasks.origin.origin_task import MoveOriginTask
+from services.motor.tasks.steps.steps_task import MoveStepsTask
+from services.motor.tasks.task_protocol import ExecKwargs, SingleMotorTaskProtocol
 from collections import deque
 
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
-
-
-class EGcodeCommand(str, Enum):
-    G0 = "G0"
-
-class EMotorLabel(str, Enum):
-    X = "X"
-    Y = "Y"
-    Z = "Z"
-
-    @classmethod
-    def from_value(cls, value: str, default: "EMotorLabel" = None) -> Optional["EMotorLabel"]:
-        try:
-            return cls(value)
-        except ValueError:
-            return default
 
 class GcodeTask(BaseMotorTask):
     def __init__(self,
@@ -55,8 +39,6 @@ class GcodeTask(BaseMotorTask):
 
         self.__gcode_lines = deque(GcodeParser(gcode_cmd).lines)
         self.__current_line: Optional[GcodeLine] = None
-
-        self.__execute_kwargs = {}
 
         self.__tasks: dict[EMotorLabel, SingleMotorTaskProtocol] = {}
         self.__motor_ids = {
@@ -85,9 +67,7 @@ class GcodeTask(BaseMotorTask):
             task.handle_pin_status_change(event)
 
     def execute(self, **kwargs: Unpack[ExecKwargs]) -> None:
-        self._is_finished = False
-        self.__execute_kwargs = kwargs
-
+        super().execute(**kwargs)
         self._start_all_tasks()
 
     def stop(self):
@@ -108,13 +88,14 @@ class GcodeTask(BaseMotorTask):
             self._dispatcher.emit_async(TaskGcodeFinishedEvent(task_id=self.uuid))
             return
 
+        empty_cmd = True
         print(f"Starting all controllers for gcode task: {self.current_line}")
 
-        empty_cmd = True
         for label_str, distance in command_line.params.items():
-            # Search which motor X, Y or Z is associated with the param, continue to next param if not valid X, Y or Z found
+            # Parse label and command
             label = EMotorLabel.from_value(label_str)
-            if label is None or distance is None:
+            command = EGcodeCommand.from_value(command_line.command_str)
+            if (label is None) or (command is None) or (distance is None):
                 continue
 
             # Load motor from DB, continue to next param if not found
@@ -122,6 +103,13 @@ class GcodeTask(BaseMotorTask):
             if motor is None:
                 continue
 
+            freq_hz = 0
+            match command:
+                case EGcodeCommand.G0:
+                    freq_hz = motor.fast_freq
+                case EGcodeCommand.G1:
+                    freq_hz = motor.target_freq
+            print(f"Gcode freq: {freq_hz}")
             # If distance is 0 create an origin task
             if distance == 0:
                 # check if the motor is already at origin
@@ -140,18 +128,18 @@ class GcodeTask(BaseMotorTask):
                 direction = motor.clockwise if distance > 0 else not motor.clockwise
                 task = MoveStepsTask(controller_service=self._controller_service, dispatcher=self._dispatcher, motor=motor, steps=steps, direction=direction)
 
-            print(f"Starting task: {distance} for motor: {motor.id}")
+            print(f"Starting task with distance: {distance} for motor: {motor.id}")
             self.__tasks[label] = task
-            self._socketio.start_background_task(self._start_task, motor, label)
+            self._socketio.start_background_task(self._start_task, motor, label, freq_hz)
             empty_cmd = False
 
         if empty_cmd:
             print(f"No motors to move for command line: {self.current_line}")
             self._start_all_tasks()
 
-    def _start_task(self, motor: MotorModel, label: EMotorLabel):
+    def _start_task(self, motor: MotorModel, label: EMotorLabel, freq_hz: int):
         try:
-            self.__tasks[label].execute(**self.__execute_kwargs)
+            self.__tasks[label].execute(**dict(self._execute_kwargs, freq_hz=freq_hz))
         except Exception as e:
             traceback.print_exc()
             self.stop()

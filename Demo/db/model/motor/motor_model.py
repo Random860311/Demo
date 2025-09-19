@@ -1,9 +1,5 @@
-from dataclasses import dataclass
-from typing import Optional
-
 from db.model.db_config import db_app
 from db.model.device_model import DeviceModel
-from db.model.pin_model import PinModel, PIN_MAP
 
 
 class MotorModel(DeviceModel):
@@ -12,6 +8,7 @@ class MotorModel(DeviceModel):
     id = db_app.Column(db_app.Integer, db_app.ForeignKey('devices.id'), primary_key=True)
 
     target_freq = db_app.Column(db_app.Float, nullable=False)
+    fast_freq = db_app.Column(db_app.Float, nullable=False)
     angle = db_app.Column(db_app.Float, nullable=False)
     duty = db_app.Column(db_app.Float, nullable=False)
     distance_per_turn = db_app.Column(db_app.Float, default=0, nullable=False)
@@ -34,10 +31,3 @@ class MotorModel(DeviceModel):
         'polymorphic_identity': 'services'
     }
 
-@dataclass
-class MotorPinConfig:
-    motor_id: int
-    steps: PinModel
-    dir: PinModel
-    enable: PinModel
-    home: PinModel

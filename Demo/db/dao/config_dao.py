@@ -4,7 +4,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 from db.dao.base_dao import DatabaseDao, TModel
-from db.model.config_model import ConfigModel
+from db.model.config.config_model import ConfigModel
 
 
 class ConfigDao(DatabaseDao[ConfigModel]):

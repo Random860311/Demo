@@ -15,7 +15,6 @@ class ControllerPWM:
                  pi: pigpio.pi,
                  controller_id: int,
                  current_position: int,
-                 target_freq: int,
                  pin_step: int,
                  pin_forward: int,
                  pin_enable: int,
@@ -32,7 +31,6 @@ class ControllerPWM:
         self.__event_dispatcher = dispatcher
         self.__pi = pi
         self.__controller_id = controller_id
-        self.__target_freq = target_freq
         self.__pin_step = pin_step
         self.__pin_forward = pin_forward
         self.__pin_enable = pin_enable
@@ -57,14 +55,6 @@ class ControllerPWM:
     @pi.setter
     def pi(self, value: pigpio.pi):
         self.__pi = value
-
-    @property
-    def target_freq(self) -> int:
-        """Target frequency at full speed Hz"""
-        return self.__target_freq
-    @target_freq.setter
-    def target_freq(self, value: int):
-        self.__target_freq = value
 
     @property
     def duty(self) -> float:
@@ -131,10 +121,12 @@ class ControllerPWM:
             raise e
         return False
 
-    def run(self, forward: bool = True, steps: int = 1):
+    def run(self, freq_hz: int, forward: bool = True, steps: int = 1):
         if self.status == EMotorStatus.RUNNING:
             print(f"Motor {self.__controller_id} is already running.")
             return
+        if freq_hz == 0:
+            raise ValueError("Frequency cannot be 0")
 
         def worker():
             try:
@@ -148,10 +140,10 @@ class ControllerPWM:
                 self.__pi.write(self.__pin_forward, 1 if forward else 0)
 
                 # Begin motion context
-                self.__tracker.begin_motion(programmed_steps=steps, forward=forward, freq_hz=float(self.target_freq))
+                self.__tracker.begin_motion(programmed_steps=steps, forward=forward, freq_hz=float(freq_hz))
 
                 #Start running
-                result = self.__pi.hardware_PWM(self.__pin_step, self.target_freq, int(self.duty * 10_000))
+                result = self.__pi.hardware_PWM(self.__pin_step, int(freq_hz), int(self.duty * 10_000))
 
                 if result != 0:
                     # Something went wrong
@@ -163,7 +155,7 @@ class ControllerPWM:
                 # NOT Infinite
                 if steps > 0:
                     # Sleep the thread for the calculated duration to move the desired steps
-                    duration = steps / self.target_freq
+                    duration = steps / freq_hz
                     print(f"Moving motor: {self.__controller_id}, {steps} steps for {duration} seconds")
                     self.__abort_event.wait(duration)
                     self.stop()

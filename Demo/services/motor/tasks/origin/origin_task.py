@@ -1,12 +1,11 @@
-from typing import Any, Unpack, Optional
+from typing import Unpack, Optional
 
 from core.event.event_dispatcher import EventDispatcher
-from db.model.motor_model import MotorModel
+from db.model.motor.motor_model import MotorModel
 from event.motor_task_event import TaskOriginFinishedEvent
 from services.controller.controller_protocol import ControllerProtocol
-from services.motor.tasks.base_run_task import BaseSingleMotorTask
-from services.motor.tasks.run_task_protocol import ExecKwargs
-from services.pigpio.pigpio_protocol import PigpioProtocol
+from services.motor.tasks.base_task import BaseSingleMotorTask
+from services.motor.tasks.task_protocol import ExecKwargs
 from servomotor.controller_status import EMotorStatus
 from servomotor.event.controller_event import MotorStatusData
 
@@ -50,5 +49,5 @@ class MoveOriginTask(BaseSingleMotorTask):
         self.__steps = abs(self.motor.origin - self.motor.position)
 
         super().execute(**kwargs)
-        self._controller_service.start_controller(self.motor.id, steps=self.__steps, forward=self.__direction)
+        self._controller_service.start_controller(controller_id=self.motor.id, steps=self.__steps, freq_hz=self.freq_hz, forward=self.__direction)
 

@@ -1,11 +1,10 @@
-import time
 from typing import Optional
 
 from flask_socketio import SocketIO
 
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.pin_dao import PinDao
-from db.model.pin_model import PinModel
+from db.model.pin.pin_model import PinModel
 from dto.pin_dto import PinDto
 from services.base_service import BaseService
 from services.pigpio.pigpio_protocol import PigpioProtocol

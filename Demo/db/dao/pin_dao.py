@@ -1,8 +1,6 @@
 from typing import Optional
 
-from flask_sqlalchemy import SQLAlchemy
-
-from db.model.pin_model import PinModel, PIN_MAP
+from db.model.pin.pin_model import PinModel, PIN_MAP
 
 
 class PinDao:

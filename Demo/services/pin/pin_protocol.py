@@ -1,6 +1,6 @@
 from typing import Protocol, Optional
 
-from db.model.pin_model import PinModel
+from db.model.pin.pin_model import PinModel
 from dto.pin_dto import PinDto
 
 
