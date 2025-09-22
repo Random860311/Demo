@@ -102,7 +102,7 @@ class ControllerPWM:
 
             # Disable services
             self.__pi.write(self.__pin_enable, 1)
-            self.__pi.hardware_PWM(self.__pin_step, 0, 0)
+            self.__pi.set_PWM_dutycycle(int(self.__pin_step), 0)
 
             # Account actual steps
             self.__tracker.finish_motion()
@@ -143,7 +143,9 @@ class ControllerPWM:
                 self.__tracker.begin_motion(programmed_steps=steps, forward=forward, freq_hz=float(freq_hz))
 
                 #Start running
-                result = self.__pi.hardware_PWM(self.__pin_step, int(freq_hz), int(self.duty * 10_000))
+                print(f"Starting motor: {self.__controller_id} at {freq_hz} Hz for {steps} steps, pin used: {self.__pin_step}")
+                self.__pi.set_PWM_frequency(int(self.__pin_step), int(freq_hz))
+                result = self.__pi.set_PWM_dutycycle(int(self.__pin_step), int(self.duty))
 
                 if result != 0:
                     # Something went wrong

@@ -42,7 +42,6 @@ class MoveStepsTask(BaseSingleMotorTask):
 
         super().execute(**kwargs)
 
-        print(kwargs)
         print(f"Steps task id: {self.motor.id} steps: {self.__steps} direction: {self.__direction} freq: {self.freq_hz}")
         self._controller_service.start_controller(controller_id=self.motor.id, steps=self.__steps, freq_hz=self.freq_hz, forward=self.__direction)
 
