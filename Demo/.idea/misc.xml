@@ -4,4 +4,7 @@
     <option name="sdkName" value="Python 3.11 (Demo)" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Remote Python 3.11.2 (sftp://amed@192.168.0.104:22/home/amed/Desktop/WorkSpace/venv/bin/python) (2)" project-jdk-type="Python SDK" />
+  <component name="PythonCompatibilityInspectionAdvertiser">
+    <option name="version" value="3" />
+  </component>
 </project>

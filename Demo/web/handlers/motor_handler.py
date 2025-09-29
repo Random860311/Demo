@@ -7,8 +7,8 @@ from core.event.event_dispatcher import EventDispatcher
 from dto.motor_dto import MotorDto
 from services.motor.motor_protocol import MotorServiceProtocol
 
-from servomotor.controller_run_mode import EControllerRunMode
-from web.events.motor_event import EMotorEventType, MotorUpdatedEvent, MotorCalibrationChangedEvent
+from servomotor.dto.controller_run_mode import EControllerRunMode
+from web.events.motor_event import EMotorEventType, MotorUpdatedEvent, CalibrationChangedEvent
 from web.handlers.base_handler import BaseHandler
 
 
@@ -38,7 +38,7 @@ class MotorHandler(BaseHandler):
         self._socketio.on_event(message=EMotorEventType.START_GCODE, handler=self._handle_gcode_command)
 
         self._dispatcher.subscribe(MotorUpdatedEvent, self._emit_event)
-        self._dispatcher.subscribe(MotorCalibrationChangedEvent, self._emit_event)
+        self._dispatcher.subscribe(CalibrationChangedEvent, self._emit_event)
 
     @BaseHandler.safe(error_message="Error fetching motors calibration.")
     def _handle_get_calibration(self, data):
@@ -53,13 +53,13 @@ class MotorHandler(BaseHandler):
     @BaseHandler.safe(error_message="Error moving motors to origin.")
     def _handle_move_to_origin(self, data):
         motor_id = utils.get_int(data, "motorId")
-        self.__motor_service.move_to_origin(motor_id)
+        self.__motor_service.run_to_origin(motor_id)
         return self.ok()
 
     @BaseHandler.safe(error_message="Error moving motors to home.")
     def _handle_move_to_home(self, data):
         motor_id = utils.get_int(data, "motorId")
-        self.__motor_service.move_to_home(motor_id)
+        self.__motor_service.run_to_home(motor_id)
         return self.ok()
 
     @BaseHandler.safe(error_message="Error setting motors origin")
@@ -94,14 +94,14 @@ class MotorHandler(BaseHandler):
     @BaseHandler.safe(error_message="Error updating motor.")
     def _handle_update_motor(self, data) -> dict[str, Any]:
         motor_dto = MotorDto.from_dict(data)
-        motor_updated = self.__motor_service.update_motor(motor_dto)
+        motor_updated = self.__motor_service.update(motor_dto)
 
         return self.ok(message=f"Motor {motor_updated.name} updated", obj_id=motor_updated.id)
 
     @BaseHandler.safe(error_message="Error stopping motor.")
     def _handle_stop_motor(self, data) -> dict[str, Any]:
         motor_id = utils.get_int(data, "motorId")
-        self.__motor_service.stop_motor(motor_id)
+        self.__motor_service.stop([motor_id])
 
         return self.ok(obj_id=motor_id)
 
@@ -111,7 +111,7 @@ class MotorHandler(BaseHandler):
         direction = utils.get_bool(data, "direction", True)
         run_mode = EControllerRunMode.from_value(data.get("runMode", 0))
 
-        motor = self.__motor_service.get_motor(motor_id)
+        motor = self.__motor_service.get_by_id(motor_id)
 
         steps = 1
         match run_mode:
@@ -122,7 +122,7 @@ class MotorHandler(BaseHandler):
             case _:
                 steps = 1
 
-        self.__motor_service.move_steps(motor_id=motor_id, steps=steps, forward=direction)
+        self.__motor_service.run_steps(motor_id=motor_id, steps=steps, forward=direction)
 
         return self.ok(obj_id=motor_id)
 

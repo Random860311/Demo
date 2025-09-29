@@ -3,7 +3,7 @@ from typing import List, Any, Optional
 
 from core.serializable import Serializable
 from dto.pin_dto import PinDto
-from servomotor.controller_status import EMotorStatus
+from servomotor.dto.controller_status import EMotorStatus
 
 
 @dataclass
@@ -38,17 +38,12 @@ class MotorDto(Serializable):
         return MotorDto(
             id=data["id"],
             name=data["name"],
-            pin_step=PinDto.from_dict(data["pin_step"]) if data.get("pin_step") else None,
-            pin_forward=PinDto.from_dict(data["pin_forward"]) if data.get("pin_forward") else None,
-            pin_enable=PinDto.from_dict(data["pin_enable"]) if data.get("pin_enable") else None,
-            # pin_home=PinDto.from_dict(data["pin_home"]) if data.get("pin_home") else None,
             angle=data["angle"],
             target_freq=data["target_freq"],
             duty=data["duty"],
             distance_per_turn=data.get("distance_per_turn", 0),
             position=data.get("position", 0),
             origin=data.get("origin", None),
-            # home=data.get("home", None),
             status=EMotorStatus(data.get("status", EMotorStatus.STOPPED))
         )
 
@@ -74,7 +69,6 @@ class MotorDto(Serializable):
 
             "position": self.position,
             "origin": self.origin,
-            # "home": self.home,
             "limit": self.limit,
 
             "clockwise": self.clockwise,

@@ -5,13 +5,12 @@ from typing import Optional, Unpack
 from core.event.event_dispatcher import EventDispatcher
 from db.model.motor.motor_model import MotorModel
 from error.app_warning import AppWarning
-from event.pin_status_change_event import PinStatusChangeEvent
-from services.controller.controller_protocol import ControllerProtocol
+from event.pin_event import PinStatusChangeEvent
+from services.controller.controller_protocol import ControllerServiceProtocol
 from services.motor.tasks.task_protocol import SingleMotorTaskProtocol, ExecKwargs, MotorTaskProtocol
-from servomotor.event.controller_event import MotorStatusData
 
 class BaseMotorTask(MotorTaskProtocol, ABC):
-    def __init__(self, controller_service: ControllerProtocol, dispatcher: EventDispatcher):
+    def __init__(self, controller_service: ControllerServiceProtocol, dispatcher: EventDispatcher):
         self._controller_service = controller_service
         self._dispatcher = dispatcher
 
@@ -22,6 +21,11 @@ class BaseMotorTask(MotorTaskProtocol, ABC):
     @property
     def uuid(self):
         return self._uuid
+
+    @property
+    @abstractmethod
+    def controller_ids(self) -> list[int]:
+        pass
 
     @property
     def is_finished(self) -> Optional[bool]:
@@ -43,11 +47,11 @@ class BaseMotorTask(MotorTaskProtocol, ABC):
     def handle_pin_status_change(self, event: PinStatusChangeEvent) -> None:
         pass
 
-    def handle_controller_status_change(self, event: MotorStatusData) -> None:
+    def handle_controller_status_change(self, event: MotorEvent) -> None:
         pass
 
 class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
-    def __init__(self, controller_service: ControllerProtocol, dispatcher: EventDispatcher):
+    def __init__(self, controller_service: ControllerServiceProtocol, dispatcher: EventDispatcher):
         super().__init__(controller_service, dispatcher)
 
         self._pass_limits = False
@@ -62,11 +66,11 @@ class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
         return self._execute_kwargs.get("freq_hz", self.motor.target_freq)
 
     @property
-    def controller_id(self):
-        return self.motor.id
+    def controller_ids(self) -> list[int]:
+        return [self.motor.id]
 
     @property
-    def current_direction(self) -> Optional[bool]:
+    def direction(self) -> Optional[bool]:
         return None
 
     @property
@@ -74,7 +78,7 @@ class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
         return None
 
     def execute(self, **kwargs: Unpack[ExecKwargs]) -> None:
-        if self._controller_service.is_controller_running(self.motor.id):
+        if self._controller_service.is_running(self.motor.id):
             raise ValueError("Cannot start a controller that is already running.")
 
         self._pass_limits = kwargs.get("pass_limits", False)
@@ -99,14 +103,14 @@ class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
 
                 if final_position is not None:
                     if self.motor.clockwise:
-                        if (self.current_direction is True) and self.motor.limit and (final_position >= self.motor.limit):
+                        if (self.direction is True) and self.motor.limit and (final_position >= self.motor.limit):
                             raise AppWarning(f"Motor '{self.motor.name}' is at limit or the limit will be surpassed and can't continue running in clockwise direction.")
-                        if (self.current_direction is False) and (final_position < self.motor.origin):
+                        if (self.direction is False) and (final_position < self.motor.origin):
                             raise AppWarning(f"Motor '{self.motor.name}' is at origin or the origin position will be surpassed and can't continue running in clockwise direction.")
                     else:
-                        if (self.current_direction is False) and self.motor.limit and (final_position <= self.motor.limit):
+                        if (self.direction is False) and self.motor.limit and (final_position <= self.motor.limit):
                             raise AppWarning(f"Motor '{self.motor.name}' is at limit or the limit will be surpassed and can't continue running in counter-clockwise direction.")
-                        if (self.current_direction is True) and (final_position > self.motor.origin):
+                        if (self.direction is True) and (final_position > self.motor.origin):
                             raise AppWarning(f"Motor '{self.motor.name}' is at origin or the origin position will be surpassed and can't continue running in counter-clockwise direction.")
         except AppWarning as ew:
             self.stop()
@@ -114,7 +118,7 @@ class BaseSingleMotorTask(SingleMotorTaskProtocol, BaseMotorTask, ABC):
 
 
 
-    def handle_controller_status_change(self, event: MotorStatusData) -> None:
+    def handle_controller_status_change(self, event: MotorEvent) -> None:
         if event.motor_id != self.motor.id or self.is_finished is not False:
             return
         self._validate_operation(event.position, check_final_position = False)

@@ -10,7 +10,7 @@ from services.base_service import BaseService
 from services.pigpio.pigpio_protocol import PigpioProtocol
 from services.pin.pin_protocol import PinProtocol
 from web.events.pin_event import PinEvent
-from event.pin_status_change_event import PinStatusChangeEvent
+from event.pin_event import PinStatusChangeEvent
 
 
 class PinService(BaseService, PinProtocol):

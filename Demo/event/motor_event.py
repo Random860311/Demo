@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import uuid
 from typing import Optional
 
@@ -8,6 +8,7 @@ from db.model.motor.motor_model import MotorModel
 @dataclass
 class TaskEvent:
     task_id: uuid.UUID
+    error: Optional[Exception] = field(default=None, kw_only=True)
 
 @dataclass
 class SingleMotorTaskEvent(TaskEvent):
@@ -28,4 +29,4 @@ class TaskOriginFinishedEvent(SingleMotorTaskEvent):
 @dataclass
 class TaskGcodeFinishedEvent(TaskEvent):
     motor: Optional[MotorModel] = None
-    error: Optional[Exception] = None
+

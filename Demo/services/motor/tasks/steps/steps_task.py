@@ -2,16 +2,15 @@ from typing import Any, Unpack, Optional
 
 from core.event.event_dispatcher import EventDispatcher
 from db.model.motor.motor_model import MotorModel
-from event.motor_task_event import TaskStepFinishedEvent
-from services.controller.controller_protocol import ControllerProtocol
+from event.motor_event import TaskStepFinishedEvent
+from services.controller.controller_protocol import ControllerServiceProtocol
 from services.motor.tasks.base_task import BaseSingleMotorTask
 from services.motor.tasks.task_protocol import ExecKwargs
-from servomotor.controller_status import EMotorStatus
-from servomotor.event.controller_event import MotorStatusData
+from servomotor.dto.controller_status import EMotorStatus
 
 
 class MoveStepsTask(BaseSingleMotorTask):
-    def __init__(self, controller_service: ControllerProtocol, motor: MotorModel, dispatcher: EventDispatcher, **kwargs: Any):
+    def __init__(self, controller_service: ControllerServiceProtocol, motor: MotorModel, dispatcher: EventDispatcher, **kwargs: Any):
         super().__init__(controller_service, dispatcher)
 
         self.__motor = motor
@@ -27,10 +26,10 @@ class MoveStepsTask(BaseSingleMotorTask):
         return self.__steps
 
     @property
-    def current_direction(self) -> Optional[bool]:
+    def direction(self) -> Optional[bool]:
         return self.__direction
 
-    def handle_controller_status_change(self, event: MotorStatusData):
+    def handle_controller_status_change(self, event: MotorEvent):
         super().handle_controller_status_change(event)
         if (event.motor_id == self.motor.id) and (self.is_finished is False) and (event.status == EMotorStatus.STOPPED):
             self.stop()
@@ -43,7 +42,8 @@ class MoveStepsTask(BaseSingleMotorTask):
         super().execute(**kwargs)
 
         print(f"Steps task id: {self.motor.id} steps: {self.__steps} direction: {self.__direction} freq: {self.freq_hz}")
-        self._controller_service.start_controller(controller_id=self.motor.id, steps=self.__steps, freq_hz=self.freq_hz, forward=self.__direction)
+
+        self._controller_service.start(controller_id=self.motor.id, steps=self.__steps, freq_hz=self.freq_hz, forward=self.__direction)
 
     def stop(self):
         super().stop()

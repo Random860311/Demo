@@ -35,6 +35,6 @@ class MotorUpdatedEvent(BaseEvent[MotorDto]):
     def __init__(self, data: MotorDto):
         super().__init__(key=EMotorEventType.UPDATED, data=data)
 
-class MotorCalibrationChangedEvent(BaseEvent[dict]):
+class CalibrationChangedEvent(BaseEvent[dict]):
     def __init__(self, calibration: bool):
         super().__init__(key=EMotorEventType.CALIBRATION_CHANGED, data={"calibrate": calibration})

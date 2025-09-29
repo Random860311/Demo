@@ -1,8 +1,8 @@
 from typing import Protocol, Optional, Any, TypedDict, Unpack, runtime_checkable
 import uuid
 
-from event.pin_status_change_event import PinStatusChangeEvent
-from servomotor.event.controller_event import MotorStatusData
+from event.pin_event import PinStatusChangeEvent
+from servomotor.event.controller_event import ControllerStatusEvent
 
 
 class ExecKwargs(TypedDict, total=False):
@@ -18,9 +18,12 @@ class MotorTaskProtocol(Protocol):
     def uuid(self) -> uuid.UUID: ...
 
     @property
+    def controller_ids(self) -> list[int]: ...
+
+    @property
     def is_finished(self) -> Optional[bool]: ...
 
-    def handle_controller_status_change(self, event: MotorStatusData) -> None:...
+    def handle_controller_status_change(self, event: ControllerStatusEvent) -> None:...
 
     def handle_pin_status_change(self, event: PinStatusChangeEvent) -> None: ...
 
@@ -30,11 +33,9 @@ class MotorTaskProtocol(Protocol):
 
 @runtime_checkable
 class SingleMotorTaskProtocol(MotorTaskProtocol, Protocol):
-    @property
-    def controller_id(self) -> int:...
 
     @property
-    def current_direction(self) -> Optional[bool]:
+    def direction(self) -> Optional[bool]:
         """
         Indicates the current movement direction.
         :return: None-> no movement, True -> clockwise, False -> counter-clockwise

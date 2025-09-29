@@ -2,29 +2,29 @@ import traceback
 from typing import Unpack, Optional
 
 from flask_socketio import SocketIO
-from gcodeparser import GcodeParser, GcodeLine
+from gcodeparser import GcodeLine
 
 from common import utils
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
 from db.model.motor.motor_label import EMotorLabel
 from db.model.motor.motor_model import MotorModel
-from event.motor_task_event import TaskGcodeFinishedEvent
-from event.pin_status_change_event import PinStatusChangeEvent
-from services.controller.controller_protocol import ControllerProtocol
+from event.motor_event import TaskGcodeFinishedEvent
+from event.pin_event import PinStatusChangeEvent
+from services.controller.controller_protocol import ControllerServiceProtocol
 from services.motor.tasks.base_task import BaseMotorTask
 from services.motor.tasks.gcode.gcode_command import EGcodeCommand
+from services.motor.tasks.gcode.gcode_converter import parse_gcode_cmd
 from services.motor.tasks.origin.origin_task import MoveOriginTask
 from services.motor.tasks.steps.steps_task import MoveStepsTask
 from services.motor.tasks.task_protocol import ExecKwargs, SingleMotorTaskProtocol
 from collections import deque
 
-from servomotor.controller_status import EMotorStatus
-from servomotor.event.controller_event import MotorStatusData
+from servomotor.dto.controller_status import EMotorStatus
 
 class GcodeTask(BaseMotorTask):
     def __init__(self,
-                 controller_service: ControllerProtocol,
+                 controller_service: ControllerServiceProtocol,
                  dispatcher: EventDispatcher,
                  socketio: SocketIO,
                  motor_dao: MotorDao,
@@ -37,7 +37,11 @@ class GcodeTask(BaseMotorTask):
         self._socketio = socketio
         self.__motor_dao = motor_dao
 
-        self.__gcode_lines = deque(GcodeParser(gcode_cmd).lines)
+        self.__gcode_lines = deque(parse_gcode_cmd(gcode_cmd)) #deque(GcodeParser(gcode_cmd).lines)
+        # print(f"Gcode task: {GcodeParser(gcode_cmd).lines}")
+
+        for lines in self.__gcode_lines:
+            print(lines.gcode_str)
         self.__current_line: Optional[GcodeLine] = None
 
         self.__tasks: dict[EMotorLabel, SingleMotorTaskProtocol] = {}
@@ -48,6 +52,10 @@ class GcodeTask(BaseMotorTask):
         }
 
     @property
+    def controller_ids(self) -> list[int]:
+        return list(self.__motor_ids.values())
+
+    @property
     def current_line(self) -> Optional[GcodeLine]:
         return self.__current_line
 
@@ -55,7 +63,7 @@ class GcodeTask(BaseMotorTask):
         self.__current_line = self.__gcode_lines.popleft() if self.__gcode_lines else None
         return self.__current_line
 
-    def handle_controller_status_change(self, event: MotorStatusData):
+    def handle_controller_status_change(self, event: MotorEvent):
         for task in self.__tasks.values():
             task.handle_controller_status_change(event)
 
@@ -77,8 +85,8 @@ class GcodeTask(BaseMotorTask):
             task.stop()
 
     def _start_all_tasks(self):
-        if self._controller_service.is_any_controller_running():
-            print("All controllers must be stopped before starting new gcode task.")
+        if self._controller_service.is_any_running():
+            # print("All controllers must be stopped before starting new gcode task.")
             return
 
         command_line = self.move_to_next_line()
@@ -89,7 +97,6 @@ class GcodeTask(BaseMotorTask):
             return
 
         empty_cmd = True
-        print(f"Starting all controllers for gcode task: {self.current_line}")
 
         for label_str, distance in command_line.params.items():
             # Parse label and command
@@ -109,7 +116,7 @@ class GcodeTask(BaseMotorTask):
                     freq_hz = motor.fast_freq
                 case EGcodeCommand.G1:
                     freq_hz = motor.target_freq
-            print(f"Gcode freq: {freq_hz}")
+            # print(f"Gcode freq: {freq_hz}")
             # If distance is 0 create an origin task
             if distance == 0:
                 # check if the motor is already at origin

@@ -1,6 +1,6 @@
 from enum import Enum
 from core.event.base_event import BaseEvent
-from event.pin_status_change_event import PinStatusChangeEvent
+from event.pin_event import PinStatusChangeEvent
 
 
 class EPinEventType(str, Enum):

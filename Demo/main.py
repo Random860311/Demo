@@ -1,10 +1,14 @@
 import eventlet
+
+from common.thread_manager import ThreadManager
+from core.thread_manager import ThreadManagerProtocol
+
 eventlet.monkey_patch()
 
 from services.pin.pin_protocol import PinProtocol
 from services.motor.motor_protocol import MotorServiceProtocol
 from services.pigpio.pigpio_protocol import PigpioProtocol
-from services.controller.controller_protocol import ControllerProtocol
+from services.controller.controller_protocol import ControllerServiceProtocol
 from services.config.config_protocol import ConfigProtocol
 from services.config.config_service import ConfigService
 from error.app_warning import AppWarning
@@ -43,6 +47,10 @@ container.register_instance(SocketIO, socketio)
 dispatcher = AppEventDispatcher(socketio)
 container.register_instance(EventDispatcher, dispatcher)
 
+# Thread Manager
+thread_manager = ThreadManager(socketio)
+container.register_instance(ThreadManagerProtocol, thread_manager)
+
 # Register DAOs
 # Register PinDao
 container.register_factory(
@@ -67,7 +75,7 @@ container.register_factory(PigpioProtocol, lambda: PigpioService(dispatcher=disp
 
 # Register ControllerService
 container.register_factory(
-    ControllerProtocol,
+    ControllerServiceProtocol,
     lambda: ControllerService(dispatcher=dispatcher,
                               socketio=socketio,
                               pigpio=container.resolve_singleton(PigpioProtocol),
@@ -88,7 +96,7 @@ container.register_factory(
     lambda: MotorService(dispatcher=dispatcher,
                          socketio=socketio,
                          pigpio=container.resolve_singleton(PigpioProtocol),
-                         controller_service=container.resolve_singleton(ControllerProtocol),
+                         controller_service=container.resolve_singleton(ControllerServiceProtocol),
                          motor_dao=container.resolve_singleton(MotorDao))
 )
 

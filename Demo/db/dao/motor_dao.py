@@ -58,11 +58,14 @@ class MotorDao(DatabaseDao[MotorModel]):
             motor = MotorModel.query.get(motor_id)
             return motor.position
 
-    def update_motor(self, motor_model: MotorModel) -> MotorModel:
+    def update_motor(self, motor_dto: MotorDto) -> MotorModel:
         with self._app.app_context():
             with self._db.session.begin_nested():
-                self._db.session.merge(motor_model)
-                return motor_model
+                model = self.get_by_id(motor_dto.id)
+                self.__to_model(motor_dto, model)
+
+                self._db.session.merge(motor_dto)
+                return model
 
     def set_home_all(self) -> list[MotorModel]:
         with self._app.app_context():
@@ -119,7 +122,7 @@ class MotorDao(DatabaseDao[MotorModel]):
         return PINS_CONFIG
 
     @staticmethod
-    def to_model(dto: MotorDto, motor_model: MotorModel):
+    def __to_model(dto: MotorDto, motor_model: MotorModel):
         motor_model.name = dto.name if dto.name else f"Motor {dto.id}"
         motor_model.target_freq = dto.target_freq
         motor_model.angle = dto.angle

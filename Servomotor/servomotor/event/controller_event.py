@@ -1,15 +1,20 @@
 from typing import Optional
 
-from core.event.base_event import BaseEvent
 from dataclasses import dataclass
 
-from servomotor.controller_status import EMotorStatus
+from servomotor.dto.controller_status import EMotorStatus
 
 
 @dataclass
-class MotorStatusData:
+class ControllerStatusEvent:
     motor_id: int
     status: EMotorStatus
-    position: int
+    freq_hz: int
+    direction: Optional[bool] # True => Clockwise, False => Counter-clockwise, None => stopped
 
-    forward: Optional[bool] = None
+@dataclass
+class ControllerPositionEvent:
+    motor_id: int
+    position: int
+    delta: int
+    direction: Optional[bool]  # True => Clockwise, False => Counter-clockwise, None => stopped

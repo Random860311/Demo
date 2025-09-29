@@ -8,7 +8,7 @@ from core.di_container import container
 from core.event.event_dispatcher import EventDispatcher
 from db.dao.motor_dao import MotorDao
 from db.dao.pin_dao import PinDao
-from event.pin_status_change_event import PinStatusChangeEvent
+from event.pin_event import PinStatusChangeEvent
 from services.base_service import BaseService
 from services.pigpio.pigpio_protocol import PigpioProtocol
 
